@@ -1,202 +1,215 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class TerrainGenerator : MonoBehaviour {
+namespace TerrainGeneration {
+    [ExecuteInEditMode]
+    public class TerrainGenerator : MonoBehaviour {
 
-    const string meshHolderName = "Terrain Mesh";
+        const string meshHolderName = "Terrain Mesh";
 
-    public float waterDepth = .2f;
-    public int worldSize = 20;
-    [Range (0.2f, 2)]
-    public float cellSize = 1;
+        public bool autoUpdate = true;
 
-    public NoiseSettings terrainNoise;
-    public Material mat;
-    public Material sideMat;
+        public int worldSize = 20;
+        [Range (0.2f, 2)]
+        public float cellSize = 1;
+        public float waterDepth = .2f;
+        public float edgeDepth = .2f;
 
-    public Biome water;
-    public Biome sand;
-    public Biome grass;
+        public NoiseSettings terrainNoise;
+        public Material mat;
 
-    [Header ("Info")]
-    public int numLandTiles;
-    public int numWaterTiles;
+        public Biome water;
+        public Biome sand;
+        public Biome grass;
 
-    MeshFilter meshFilter;
-    MeshRenderer meshRenderer;
-    Mesh mesh;
+        [Header ("Info")]
+        public int numTiles;
+        public int numLandTiles;
+        public int numWaterTiles;
+        public float waterPercent;
 
-    bool needsUpdate;
+        MeshFilter meshFilter;
+        MeshRenderer meshRenderer;
+        Mesh mesh;
 
-    void Update () {
-        if (needsUpdate) {
-            needsUpdate = false;
-            Generate ();
+        bool needsUpdate;
+
+        void Update () {
+            if (needsUpdate && autoUpdate) {
+                needsUpdate = false;
+                Generate ();
+            }
         }
-    }
 
-    public void Generate () {
-        CreateMeshComponents ();
-        numLandTiles = 0;
-        numWaterTiles = 0;
+        public void Generate () {
+            CreateMeshComponents ();
 
-        var biomes = new Biome[] { water, sand, grass };
+            int numCellsPerLine = Mathf.CeilToInt (worldSize / cellSize);
+            float actualWorldSize = cellSize * numCellsPerLine;
+            float min = -actualWorldSize / 2f;
+            float[, ] map = HeightmapGenerator.GenerateHeightmap (terrainNoise, numCellsPerLine);
 
-        int numCellsPerLine = Mathf.CeilToInt (worldSize / cellSize);
-        float actualWorldSize = cellSize * numCellsPerLine;
-        float min = -actualWorldSize / 2;
-        float[, ] map = HeightmapGenerator.GenerateHeightmap (terrainNoise, numCellsPerLine);
+            var vertices = new List<Vector3> ();
+            var triangles = new List<int> ();
+            var uvs = new List<Vector2> ();
+            var normals = new List<Vector3> ();
 
-        var vertices = new List<Vector3> ();
-        var triangles = new List<int> ();
-        var uvs = new List<Vector2> ();
-        var normals = new List<Vector3> ();
+            // Some convenience stuff:
+            var biomes = new Biome[] { water, sand, grass };
+            Vector3[] upVectorX4 = { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            Vector2Int[] nswe = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+            int[][] sideVertIndexByDir = { new int[] { 3, 2 }, new int[] { 0, 1 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
+            Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
 
-        var sideTriangles = new List<int> ();
+            numLandTiles = 0;
+            numWaterTiles = 0;
 
-        // 
-        Vector3[] normalsSet = { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
-        Vector2Int[] nswe = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-        // Tile verts are in order: NW, NE, SW, SE
-        int[][] vertIndexByDir = { new int[] { 3, 2 }, new int[] { 0, 1 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
-        Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
+            for (int y = 0; y < numCellsPerLine; y++) {
+                for (int x = 0; x < numCellsPerLine; x++) {
+                    Vector2 uv = GetBiomeInfo (map[x, y], biomes);
+                    uvs.AddRange (new Vector2[] { uv, uv, uv, uv });
 
-        for (int y = 0; y < numCellsPerLine; y++) {
-            for (int x = 0; x < numCellsPerLine; x++) {
-                // Calculate biome
-                int biomeIndex = 0;
-                float biomeStartHeight = 0;
-                for (int i = 0; i < biomes.Length; i++) {
-                    if (map[x, y] <= biomes[i].height) {
-                        biomeIndex = i;
-                        break;
+                    bool isWaterTile = uv.x == 0f;
+                    bool isLandTile = !isWaterTile;
+                    if (isWaterTile) {
+                        numWaterTiles++;
+                    } else {
+                        numLandTiles++;
                     }
-                    biomeStartHeight = biomes[i].height;
-                }
 
-                Biome biome = biomes[biomeIndex];
-                float sampleT = Mathf.InverseLerp (biomeStartHeight, biome.height, map[x, y]);
-                sampleT = (int) (sampleT * biome.numSteps) / (float) Mathf.Max (biome.numSteps, 1);
+                    // Vertices
+                    int vertIndex = vertices.Count;
+                    float height = (isWaterTile) ? -waterDepth : 0;
+                    Vector3 nw = new Vector3 (min + cellSize * x, height, -min - cellSize * y);
+                    Vector3 ne = nw + Vector3.right * cellSize;
+                    Vector3 sw = nw - Vector3.forward * cellSize;
+                    Vector3 se = sw + Vector3.right * cellSize;
+                    Vector3[] tileVertices = { nw, ne, sw, se };
+                    vertices.AddRange (tileVertices);
+                    normals.AddRange (upVectorX4);
 
-                Vector2 uv = new Vector2 (biomeIndex, sampleT);
-                uvs.Add (uv);
-                uvs.Add (uv);
-                uvs.Add (uv);
-                uvs.Add (uv);
+                    // Add triangles
+                    triangles.Add (vertIndex);
+                    triangles.Add (vertIndex + 1);
+                    triangles.Add (vertIndex + 2);
+                    triangles.Add (vertIndex + 1);
+                    triangles.Add (vertIndex + 3);
+                    triangles.Add (vertIndex + 2);
 
-                bool isWaterTile = biomeIndex == 0;
-                if (isWaterTile) {
-                    numWaterTiles++;
-                } else {
-                    numLandTiles++;
-                }
+                    // Bridge gaps between water and land tiles, and also fill in sides of map
+                    bool isEdgeTile = x == 0 || x == numCellsPerLine - 1 || y == 0 || y == numCellsPerLine - 1;
+                    if (isLandTile || isEdgeTile) {
+                        for (int i = 0; i < nswe.Length; i++) {
+                            int neighbourX = x + nswe[i].x;
+                            int neighbourY = y + nswe[i].y;
+                            bool neighbourIsOutOfBounds = neighbourX < 0 || neighbourX >= numCellsPerLine || neighbourY < 0 || neighbourY >= numCellsPerLine;
+                            bool neighbourIsWater = false;
+                            if (!neighbourIsOutOfBounds) {
+                                float neighbourHeight = map[neighbourX, neighbourY];
+                                neighbourIsWater = neighbourHeight <= biomes[0].height;
+                            }
 
-                // Vertices
-                int vertIndex = vertices.Count;
-                float height = (isWaterTile) ? -waterDepth : 0;
-                Vector3 nw = new Vector3 (min + cellSize * x, height, -min - cellSize * y);
-                Vector3 ne = nw + Vector3.right * cellSize;
-                Vector3 sw = nw - Vector3.forward * cellSize;
-                Vector3 se = sw + Vector3.right * cellSize;
-                Vector3[] tileVertices = { nw, ne, sw, se };
-
-                // Add vertices
-                vertices.AddRange (tileVertices);
-                normals.AddRange (normalsSet);
-
-                // Add triangles
-                triangles.Add (vertIndex);
-                triangles.Add (vertIndex + 1);
-                triangles.Add (vertIndex + 2);
-                triangles.Add (vertIndex + 1);
-                triangles.Add (vertIndex + 3);
-                triangles.Add (vertIndex + 2);
-
-                if (isWaterTile) {
-                    for (int i = 0; i < nswe.Length; i++) {
-                        int neighbourX = x + nswe[i].x;
-                        int neighbourY = y + nswe[i].y;
-                        if (neighbourX >= 0 && neighbourX < numCellsPerLine && neighbourY >= 0 && neighbourY < numCellsPerLine) {
-                            float neighbourHeight = map[neighbourX, neighbourY];
-                            bool neighbourIsLand = neighbourHeight > biomes[0].height;
-                            if (neighbourIsLand) {
+                            if (neighbourIsOutOfBounds || (isLandTile && neighbourIsWater)) {
+                                float depth = waterDepth;
+                                if (neighbourIsOutOfBounds) {
+                                    depth = (isWaterTile) ? edgeDepth : edgeDepth + waterDepth;
+                                }
                                 vertIndex = vertices.Count;
-                                int edgeVertIndexA = vertIndexByDir[i][0];
-                                int edgeVertIndexB = vertIndexByDir[i][1];
+                                int edgeVertIndexA = sideVertIndexByDir[i][0];
+                                int edgeVertIndexB = sideVertIndexByDir[i][1];
                                 vertices.Add (tileVertices[edgeVertIndexA]);
-                                vertices.Add (tileVertices[edgeVertIndexA] + Vector3.up * waterDepth);
+                                vertices.Add (tileVertices[edgeVertIndexA] + Vector3.down * depth);
                                 vertices.Add (tileVertices[edgeVertIndexB]);
-                                vertices.Add (tileVertices[edgeVertIndexB] + Vector3.up * waterDepth);
-                                uvs.AddRange (new Vector2[] { Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero });
-                                sideTriangles.Add (vertIndex);
-                                sideTriangles.Add (vertIndex + 1);
-                                sideTriangles.Add (vertIndex + 2);
-                                sideTriangles.Add (vertIndex + 1);
-                                sideTriangles.Add (vertIndex + 3);
-                                sideTriangles.Add (vertIndex + 2);
+                                vertices.Add (tileVertices[edgeVertIndexB] + Vector3.down * depth);
+
+                                uvs.AddRange (new Vector2[] { uv, uv, uv, uv });
+                                int[] sideTriIndices = { vertIndex, vertIndex + 1, vertIndex + 2, vertIndex + 1, vertIndex + 3, vertIndex + 2 };
+                                triangles.AddRange (sideTriIndices);
                                 normals.AddRange (new Vector3[] { sideNormalsByDir[i], sideNormalsByDir[i], sideNormalsByDir[i], sideNormalsByDir[i] });
                             }
                         }
                     }
                 }
             }
-        }
 
-        mesh.subMeshCount = 2;
-        mesh.SetVertices (vertices);
-        mesh.SetTriangles (triangles, 0, true);
-        mesh.SetTriangles (sideTriangles, 1);
-        mesh.SetUVs (0, uvs);
-        mesh.SetNormals (normals);
+            // Update mesh:
+            mesh.SetVertices (vertices);
+            mesh.SetTriangles (triangles, 0, true);
+            mesh.SetUVs (0, uvs);
+            mesh.SetNormals (normals);
 
-        if (mat != null && sideMat != null) {
-             meshRenderer.sharedMaterials = new Material[] { mat, sideMat};
-
-            Color[] startCols = { water.startCol, sand.startCol, grass.startCol };
-            Color[] endCols = { water.endCol, sand.endCol, grass.endCol };
-            mat.SetColorArray ("_StartCols", startCols);
-            mat.SetColorArray ("_EndCols", endCols);
-        }
-    }
-
-    [System.Serializable]
-    public class Biome {
-        [Range (0, 1)]
-        public float height;
-        public Color startCol;
-        public Color endCol;
-        public int numSteps;
-    }
-
-    void CreateMeshComponents () {
-        GameObject holder = null;
-
-        if (meshFilter == null) {
-            if (GameObject.Find (meshHolderName)) {
-                holder = GameObject.Find (meshHolderName);
-            } else {
-                holder = new GameObject (meshHolderName);
-                holder.AddComponent<MeshRenderer> ();
-                holder.AddComponent<MeshFilter> ();
+            // Set colours:
+            if (mat != null) {
+                meshRenderer.sharedMaterial = mat;
+                Color[] startCols = { water.startCol, sand.startCol, grass.startCol };
+                Color[] endCols = { water.endCol, sand.endCol, grass.endCol };
+                mat.SetColorArray ("_StartCols", startCols);
+                mat.SetColorArray ("_EndCols", endCols);
             }
-            meshFilter = holder.GetComponent<MeshFilter> ();
-            meshRenderer = holder.GetComponent<MeshRenderer> ();
+
+            numTiles = numLandTiles + numWaterTiles;
+            waterPercent = numWaterTiles / (float) numTiles;
         }
 
-        if (meshFilter.sharedMesh == null) {
-            mesh = new Mesh ();
-            meshFilter.sharedMesh = mesh;
-        } else {
-            mesh = meshFilter.sharedMesh;
-            mesh.Clear ();
+        Vector2 GetBiomeInfo (float height, Biome[] biomes) {
+            // Find current biome
+            int biomeIndex = 0;
+            float biomeStartHeight = 0;
+            for (int i = 0; i < biomes.Length; i++) {
+                if (height <= biomes[i].height) {
+                    biomeIndex = i;
+                    break;
+                }
+                biomeStartHeight = biomes[i].height;
+            }
+
+            Biome biome = biomes[biomeIndex];
+            float sampleT = Mathf.InverseLerp (biomeStartHeight, biome.height, height);
+            sampleT = (int) (sampleT * biome.numSteps) / (float) Mathf.Max (biome.numSteps, 1);
+
+            // UV stores x: biomeIndex and y: val between 0 and 1 for how close to prev/next biome
+            Vector2 uv = new Vector2 (biomeIndex, sampleT);
+            return uv;
         }
 
-        meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-    }
+        void CreateMeshComponents () {
+            GameObject holder = null;
 
-    void OnValidate () {
-        needsUpdate = true;
-    }
+            if (meshFilter == null) {
+                if (GameObject.Find (meshHolderName)) {
+                    holder = GameObject.Find (meshHolderName);
+                } else {
+                    holder = new GameObject (meshHolderName);
+                    holder.AddComponent<MeshRenderer> ();
+                    holder.AddComponent<MeshFilter> ();
+                }
+                meshFilter = holder.GetComponent<MeshFilter> ();
+                meshRenderer = holder.GetComponent<MeshRenderer> ();
+            }
 
+            if (meshFilter.sharedMesh == null) {
+                mesh = new Mesh ();
+                mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                meshFilter.sharedMesh = mesh;
+            } else {
+                mesh = meshFilter.sharedMesh;
+                mesh.Clear ();
+            }
+
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        void OnValidate () {
+            needsUpdate = true;
+        }
+
+        [System.Serializable]
+        public class Biome {
+            [Range (0, 1)]
+            public float height;
+            public Color startCol;
+            public Color endCol;
+            public int numSteps;
+        }
+    }
 }
