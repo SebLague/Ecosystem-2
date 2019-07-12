@@ -10,6 +10,7 @@ public class Environment : MonoBehaviour {
     public static Vector3[, ] tileCentres;
     public static bool[, ] walkable;
 
+    static int size;
     static WalkableNeigbours[, ] walkableNeighboursMap;
     static System.Random prng;
 
@@ -22,12 +23,55 @@ public class Environment : MonoBehaviour {
         SpawnInitialPopulations ();
     }
 
-    public static Vector2Int GetRandomWalkableNeighbour (Vector2Int coord) {
-        var neighbours = walkableNeighboursMap[coord.x, coord.y];
+    public static Vector2Int GetNextTileRandom (Vector2Int current) {
+        var neighbours = walkableNeighboursMap[current.x, current.y];
         if (neighbours.count == 0) {
-            return coord;
+            return current;
         }
         return neighbours.coords[prng.Next (neighbours.count)];
+    }
+
+    /// Get random neighbour tile, weighted towards those in similar direction as currently facing
+    public static Vector2Int GetNextTileWeighted (Vector2Int current, Vector2Int previous, double forwardProbability = 0.0, int weightingIterations = 3) {
+
+        if (current == previous) {
+            return GetNextTileRandom (current);
+        }
+
+        Vector2Int forwardOffset = (current - previous);
+        // Random chance of returning foward tile (if walkable)
+        if (prng.NextDouble () < forwardProbability) {
+            Vector2Int forwardCoord = current + forwardOffset;
+
+            if (forwardCoord.x >= 0 && forwardCoord.x < size && forwardCoord.y >= 0 && forwardCoord.y < size) {
+                if (walkable[forwardCoord.x, forwardCoord.y]) {
+                    return forwardCoord;
+                }
+            }
+        }
+
+        // Get walkable neighbours
+        var neighbours = walkableNeighboursMap[current.x, current.y];
+        if (neighbours.count == 0) {
+            return current;
+        }
+
+        // From n random tiles, pick the one that is most aligned with the forward direction:
+        Vector2 forwardDir = new Vector2 (forwardOffset.x, forwardOffset.y).normalized;
+        float bestScore = float.MinValue;
+        Vector2Int bestNeighbour = current;
+
+        for (int i = 0; i < weightingIterations; i++) {
+            Vector2Int neighbour = neighbours.coords[prng.Next (neighbours.count)];
+            Vector2 offset = neighbour - current;
+            float score = Vector2.Dot (offset.normalized, forwardDir);
+            if (score > bestScore) {
+                bestScore = score;
+                bestNeighbour = neighbour;
+            }
+        }
+
+        return bestNeighbour;
     }
 
     void CreateTerrain () {
@@ -35,7 +79,8 @@ public class Environment : MonoBehaviour {
         terrainData = terrainGenerator.Generate ();
         tileCentres = terrainData.tileCentres;
         walkable = terrainData.walkable;
-        int size = terrainData.size;
+        size = terrainData.size;
+
         walkableNeighboursMap = new WalkableNeigbours[size, size];
 
         // Find and store all walkable neighbours for each walkable tile on the map
@@ -43,8 +88,8 @@ public class Environment : MonoBehaviour {
             for (int x = 0; x < terrainData.size; x++) {
                 if (walkable[x, y]) {
                     List<Vector2Int> walkableNeighbours = new List<Vector2Int> ();
-                    for (int offsetY = 0; offsetY <= 1; offsetY++) {
-                        for (int offsetX = 0; offsetX <= 1; offsetX++) {
+                    for (int offsetY = -1; offsetY <= 1; offsetY++) {
+                        for (int offsetX = -1; offsetX <= 1; offsetX++) {
                             if (offsetX != 0 || offsetY != 0) {
                                 int neighbourX = x + offsetX;
                                 int neighbourY = y + offsetY;

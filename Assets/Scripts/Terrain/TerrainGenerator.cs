@@ -59,8 +59,8 @@ namespace TerrainGeneration {
             var biomes = new Biome[] { water, sand, grass };
             Vector3[] upVectorX4 = { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
             Vector2Int[] nswe = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-            int[][] sideVertIndexByDir = { new int[] { 3, 2 }, new int[] { 0, 1 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
-            Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
+            int[][] sideVertIndexByDir = { new int[] { 0, 1 }, new int[] { 3, 2 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
+            Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
 
             // Terrain data:
             var terrainData = new TerrainData (numTilesPerLine);
@@ -83,7 +83,7 @@ namespace TerrainGeneration {
                     // Vertices
                     int vertIndex = vertices.Count;
                     float height = (isWaterTile) ? -waterDepth : 0;
-                    Vector3 nw = new Vector3 (min + x, height, -min - y);
+                    Vector3 nw = new Vector3 (min + x, height, min + y + 1);
                     Vector3 ne = nw + Vector3.right;
                     Vector3 sw = nw - Vector3.forward;
                     Vector3 se = sw + Vector3.right;
