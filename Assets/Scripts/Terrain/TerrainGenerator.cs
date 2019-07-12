@@ -10,8 +10,6 @@ namespace TerrainGeneration {
         public bool autoUpdate = true;
 
         public int worldSize = 20;
-        [Range (0.2f, 2)]
-        public float cellSize = 1;
         public float waterDepth = .2f;
         public float edgeDepth = .2f;
 
@@ -45,13 +43,12 @@ namespace TerrainGeneration {
             }
         }
 
-        public void Generate () {
+        public TerrainData Generate () {
             CreateMeshComponents ();
 
-            int numCellsPerLine = Mathf.CeilToInt (worldSize / cellSize);
-            float actualWorldSize = cellSize * numCellsPerLine;
-            float min = -actualWorldSize / 2f;
-            float[, ] map = HeightmapGenerator.GenerateHeightmap (terrainNoise, numCellsPerLine);
+            int numTilesPerLine = Mathf.CeilToInt (worldSize);
+            float min = -numTilesPerLine / 2f;
+            float[, ] map = HeightmapGenerator.GenerateHeightmap (terrainNoise, numTilesPerLine);
 
             var vertices = new List<Vector3> ();
             var triangles = new List<int> ();
@@ -65,11 +62,13 @@ namespace TerrainGeneration {
             int[][] sideVertIndexByDir = { new int[] { 3, 2 }, new int[] { 0, 1 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
             Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
 
+            // Terrain data:
+            var terrainData = new TerrainData (numTilesPerLine);
             numLandTiles = 0;
             numWaterTiles = 0;
 
-            for (int y = 0; y < numCellsPerLine; y++) {
-                for (int x = 0; x < numCellsPerLine; x++) {
+            for (int y = 0; y < numTilesPerLine; y++) {
+                for (int x = 0; x < numTilesPerLine; x++) {
                     Vector2 uv = GetBiomeInfo (map[x, y], biomes);
                     uvs.AddRange (new Vector2[] { uv, uv, uv, uv });
 
@@ -84,10 +83,10 @@ namespace TerrainGeneration {
                     // Vertices
                     int vertIndex = vertices.Count;
                     float height = (isWaterTile) ? -waterDepth : 0;
-                    Vector3 nw = new Vector3 (min + cellSize * x, height, -min - cellSize * y);
-                    Vector3 ne = nw + Vector3.right * cellSize;
-                    Vector3 sw = nw - Vector3.forward * cellSize;
-                    Vector3 se = sw + Vector3.right * cellSize;
+                    Vector3 nw = new Vector3 (min + x, height, -min - y);
+                    Vector3 ne = nw + Vector3.right;
+                    Vector3 sw = nw - Vector3.forward;
+                    Vector3 se = sw + Vector3.right;
                     Vector3[] tileVertices = { nw, ne, sw, se };
                     vertices.AddRange (tileVertices);
                     normals.AddRange (upVectorX4);
@@ -100,13 +99,20 @@ namespace TerrainGeneration {
                     triangles.Add (vertIndex + 3);
                     triangles.Add (vertIndex + 2);
 
+                    // Terrain data:
+                    terrainData.tileCentres[x, y] = nw + new Vector3 (0.5f, 0, -0.5f);
+                    terrainData.walkable[x, y] = isLandTile;
+                    if (isLandTile) {
+                        terrainData.landCoords.Add (new Vector2Int (x, y));
+                    }
+
                     // Bridge gaps between water and land tiles, and also fill in sides of map
-                    bool isEdgeTile = x == 0 || x == numCellsPerLine - 1 || y == 0 || y == numCellsPerLine - 1;
+                    bool isEdgeTile = x == 0 || x == numTilesPerLine - 1 || y == 0 || y == numTilesPerLine - 1;
                     if (isLandTile || isEdgeTile) {
                         for (int i = 0; i < nswe.Length; i++) {
                             int neighbourX = x + nswe[i].x;
                             int neighbourY = y + nswe[i].y;
-                            bool neighbourIsOutOfBounds = neighbourX < 0 || neighbourX >= numCellsPerLine || neighbourY < 0 || neighbourY >= numCellsPerLine;
+                            bool neighbourIsOutOfBounds = neighbourX < 0 || neighbourX >= numTilesPerLine || neighbourY < 0 || neighbourY >= numTilesPerLine;
                             bool neighbourIsWater = false;
                             if (!neighbourIsOutOfBounds) {
                                 float neighbourHeight = map[neighbourX, neighbourY];
@@ -147,6 +153,7 @@ namespace TerrainGeneration {
 
             numTiles = numLandTiles + numWaterTiles;
             waterPercent = numWaterTiles / (float) numTiles;
+            return terrainData;
         }
 
         void UpdateColours () {
@@ -217,6 +224,20 @@ namespace TerrainGeneration {
             public Color startCol;
             public Color endCol;
             public int numSteps;
+        }
+
+        public class TerrainData {
+            public int size;
+            public Vector3[, ] tileCentres;
+            public bool[, ] walkable;
+            public List<Vector2Int> landCoords;
+
+            public TerrainData (int size) {
+                this.size = size;
+                tileCentres = new Vector3[size, size];
+                walkable = new bool[size, size];
+                landCoords = new List<Vector2Int> ();
+            }
         }
     }
 }
