@@ -20,23 +20,13 @@ public class Animal : MonoBehaviour {
         this.coord = coord;
 
     }
-    void Start () {
+    protected virtual void Start () {
         OnFinishedMoving ();
     }
 
     protected virtual void OnFinishedMoving () {
-        for (int i = 0; i < 10; i++) {
-            int dirX = Random.Range (-1, 2);
-            int dirY = Random.Range (-1, 2);
-            Vector2Int newCoord = coord + new Vector2Int (dirX, dirY);
-            if (newCoord.x >= 0 && newCoord.x < Environment.tileCentres.GetLength (0) && newCoord.y >= 0 && newCoord.y < Environment.tileCentres.GetLength (0)) {
-                if (Environment.walkable[newCoord.x, newCoord.y]) {
-                    StartHopToCoord (newCoord);
-                    break;
-                }
-            }
-        }
 
+        StartHopToCoord (Environment.GetRandomWalkableNeighbour (coord));
     }
 
     protected void StartHopToCoord (Vector2Int coord) {
@@ -54,17 +44,21 @@ public class Animal : MonoBehaviour {
         }
     }
 
-    void Update () {
+    protected virtual void Update () {
 
         if (hopping) {
-            hopTime = Mathf.Min (1, hopTime + Time.deltaTime * hopSpeed);
-            float height = (1 - 4 * (hopTime - .5f) * (hopTime - .5f)) * hopHeight;
-            transform.position = Vector3.Lerp (hopStart, hopTarget, hopTime) + Vector3.up * height;
-            if (hopTime >= 1) {
-                coord = targetCoord;
-                hopTime = 0;
-                OnFinishedMoving ();
-            }
+            AnimateHop ();
+        }
+    }
+
+    void AnimateHop () {
+        hopTime = Mathf.Min (1, hopTime + Time.deltaTime * hopSpeed);
+        float height = (1 - 4 * (hopTime - .5f) * (hopTime - .5f)) * hopHeight;
+        transform.position = Vector3.Lerp (hopStart, hopTarget, hopTime) + Vector3.up * height;
+        if (hopTime >= 1) {
+            coord = targetCoord;
+            hopTime = 0;
+            OnFinishedMoving ();
         }
     }
 
