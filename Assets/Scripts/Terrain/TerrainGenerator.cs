@@ -38,6 +38,10 @@ namespace TerrainGeneration {
             if (needsUpdate && autoUpdate) {
                 needsUpdate = false;
                 Generate ();
+            } else {
+                if (!Application.isPlaying) {
+                    UpdateColours ();
+                }
             }
         }
 
@@ -138,17 +142,20 @@ namespace TerrainGeneration {
             mesh.SetUVs (0, uvs);
             mesh.SetNormals (normals);
 
-            // Set colours:
+            meshRenderer.sharedMaterial = mat;
+            UpdateColours ();
+
+            numTiles = numLandTiles + numWaterTiles;
+            waterPercent = numWaterTiles / (float) numTiles;
+        }
+
+        void UpdateColours () {
             if (mat != null) {
-                meshRenderer.sharedMaterial = mat;
                 Color[] startCols = { water.startCol, sand.startCol, grass.startCol };
                 Color[] endCols = { water.endCol, sand.endCol, grass.endCol };
                 mat.SetColorArray ("_StartCols", startCols);
                 mat.SetColorArray ("_EndCols", endCols);
             }
-
-            numTiles = numLandTiles + numWaterTiles;
-            waterPercent = numWaterTiles / (float) numTiles;
         }
 
         Vector2 GetBiomeInfo (float height, Biome[] biomes) {
