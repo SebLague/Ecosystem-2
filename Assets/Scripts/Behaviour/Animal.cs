@@ -8,9 +8,19 @@ public class Animal : MonoBehaviour {
     float hopSpeed = 1.5f;
     Vector2Int coord;
 
+    // Hop data:
+    bool hopping;
+    Vector2Int targetCoord;
+    Vector3 hopStart;
+    Vector3 hopTarget;
+    float hopTime;
+
     public void SetCoord (Vector2Int coord) {
         transform.position = Environment.tileCentres[coord.x, coord.y];
         this.coord = coord;
+
+    }
+    void Start () {
         OnFinishedMoving ();
     }
 
@@ -21,12 +31,20 @@ public class Animal : MonoBehaviour {
             Vector2Int newCoord = coord + new Vector2Int (dirX, dirY);
             if (newCoord.x >= 0 && newCoord.x < Environment.tileCentres.GetLength (0) && newCoord.y >= 0 && newCoord.y < Environment.tileCentres.GetLength (0)) {
                 if (Environment.walkable[newCoord.x, newCoord.y]) {
-                    StartCoroutine (MoveTo (newCoord));
+                    StartHopToCoord (newCoord);
                     break;
                 }
             }
         }
 
+    }
+
+    protected void StartHopToCoord (Vector2Int coord) {
+        targetCoord = coord;
+        hopStart = transform.position;
+        hopTarget = Environment.tileCentres[coord.x, coord.y];
+        hopping = true;
+        LookAt (targetCoord);
     }
 
     protected void LookAt (Vector2Int target) {
@@ -36,18 +54,18 @@ public class Animal : MonoBehaviour {
         }
     }
 
-    protected IEnumerator MoveTo (Vector2Int targetCoord) {
-        LookAt (targetCoord);
-        Vector3 startPos = transform.position;
-        Vector3 targetPos = Environment.tileCentres[targetCoord.x, targetCoord.y];
-        float t = 0;
-        while (t < 1) {
-            t = Mathf.Min (1, t + Time.deltaTime * hopSpeed);
-            float height = (1 - 4 * (t - .5f) * (t - .5f)) * hopHeight;
-            transform.position = Vector3.Lerp (startPos, targetPos, t) + Vector3.up * height;
-            yield return null;
+    void Update () {
+
+        if (hopping) {
+            hopTime = Mathf.Min (1, hopTime + Time.deltaTime * hopSpeed);
+            float height = (1 - 4 * (hopTime - .5f) * (hopTime - .5f)) * hopHeight;
+            transform.position = Vector3.Lerp (hopStart, hopTarget, hopTime) + Vector3.up * height;
+            if (hopTime >= 1) {
+                coord = targetCoord;
+                hopTime = 0;
+                OnFinishedMoving ();
+            }
         }
-        coord = targetCoord;
-        OnFinishedMoving ();
     }
+
 }
