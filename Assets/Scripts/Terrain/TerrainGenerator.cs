@@ -9,6 +9,7 @@ namespace TerrainGeneration {
 
         public bool autoUpdate = true;
 
+        public bool centralize = true;
         public int worldSize = 20;
         public float waterDepth = .2f;
         public float edgeDepth = .2f;
@@ -47,7 +48,7 @@ namespace TerrainGeneration {
             CreateMeshComponents ();
 
             int numTilesPerLine = Mathf.CeilToInt (worldSize);
-            float min = -numTilesPerLine / 2f;
+            float min = (centralize) ? -numTilesPerLine / 2f : 0;
             float[, ] map = HeightmapGenerator.GenerateHeightmap (terrainNoise, numTilesPerLine);
 
             var vertices = new List<Vector3> ();

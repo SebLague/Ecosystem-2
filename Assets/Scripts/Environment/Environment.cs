@@ -14,7 +14,7 @@ public class Environment : MonoBehaviour {
     public static bool[, ] walkable;
     static int size;
     static Vector2Int[, ][] walkableNeighboursMap;
-    
+
     // array of visible tiles from any tile, ordered nearest to furthest. cached on request.
     static Vector2Int[, ][] visibleTilesMap;
     static bool[, ] visibilityCalculatedFlags;
@@ -23,11 +23,26 @@ public class Environment : MonoBehaviour {
     static Vector2Int[] viewOffsetsByDistance;
     TerrainGenerator.TerrainData terrainData;
 
+    Map map;
+
+    [Header ("Debug")]
+    public Transform mapCoordTransform;
+    public float mapViewDst;
+
     void Start () {
         prng = new System.Random ();
 
         CreateTerrain ();
         SpawnInitialPopulations ();
+
+        map = new Map (size, 10);
+    }
+
+    void OnDrawGizmos () {
+        if (map != null && mapCoordTransform != null) {
+            Vector2Int coord = new Vector2Int ((int) mapCoordTransform.position.x, (int) mapCoordTransform.position.z);
+            map.DrawDebugGizmos (coord, mapViewDst);
+        }
     }
 
     public static Vector2Int[] Sense (Vector2Int coord) {

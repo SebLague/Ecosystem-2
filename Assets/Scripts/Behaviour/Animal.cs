@@ -10,9 +10,6 @@ public class Animal : LivingEntity {
     float hopHeight = .2f;
     float hopSpeed = 1.5f;
 
-    // State:
-    Vector2Int coord;
-
     // Hop data:
     bool hopping;
     Vector2Int hopStartCoord;
