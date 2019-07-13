@@ -59,7 +59,7 @@ namespace TerrainGeneration {
             // Some convenience stuff:
             var biomes = new Biome[] { water, sand, grass };
             Vector3[] upVectorX4 = { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
-            Vector2Int[] nswe = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+            Coord[] nswe = { Coord.up, Coord.down, Coord.left, Coord.right };
             int[][] sideVertIndexByDir = { new int[] { 0, 1 }, new int[] { 3, 2 }, new int[] { 2, 0 }, new int[] { 1, 3 } };
             Vector3[] sideNormalsByDir = { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
 
@@ -104,7 +104,7 @@ namespace TerrainGeneration {
                     terrainData.tileCentres[x, y] = nw + new Vector3 (0.5f, 0, -0.5f);
                     terrainData.walkable[x, y] = isLandTile;
                     if (isLandTile) {
-                        terrainData.landCoords.Add (new Vector2Int (x, y));
+                        terrainData.landCoords.Add (new Coord (x, y));
                     }
 
                     // Bridge gaps between water and land tiles, and also fill in sides of map
@@ -118,6 +118,9 @@ namespace TerrainGeneration {
                             if (!neighbourIsOutOfBounds) {
                                 float neighbourHeight = map[neighbourX, neighbourY];
                                 neighbourIsWater = neighbourHeight <= biomes[0].height;
+                                if (neighbourIsWater) {
+                                    terrainData.shore[neighbourX, neighbourY] = true;
+                                }
                             }
 
                             if (neighbourIsOutOfBounds || (isLandTile && neighbourIsWater)) {
@@ -231,13 +234,15 @@ namespace TerrainGeneration {
             public int size;
             public Vector3[, ] tileCentres;
             public bool[, ] walkable;
-            public List<Vector2Int> landCoords;
+            public bool[, ] shore;
+            public List<Coord> landCoords;
 
             public TerrainData (int size) {
                 this.size = size;
                 tileCentres = new Vector3[size, size];
                 walkable = new bool[size, size];
-                landCoords = new List<Vector2Int> ();
+                landCoords = new List<Coord> ();
+                shore = new bool[size, size];
             }
         }
     }

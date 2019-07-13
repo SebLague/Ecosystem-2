@@ -18,8 +18,8 @@ public class Map {
 
         for (int y = 0; y < numRegions; y++) {
             for (int x = 0; x < numRegions; x++) {
-                Vector2Int regionBottomLeft = new Vector2Int (x * regionSize, y * regionSize);
-                Vector2Int regionTopRight = new Vector2Int (x * regionSize + regionSize, y * regionSize + regionSize);
+                Coord regionBottomLeft = new Coord (x * regionSize, y * regionSize);
+                Coord regionTopRight = new Coord (x * regionSize + regionSize, y * regionSize + regionSize);
                 Vector2 centre = (Vector2) (regionBottomLeft + regionTopRight) / 2f;
                 centres[x, y] = centre;
                 map[x, y] = new List<LivingEntity> ();
@@ -28,8 +28,8 @@ public class Map {
     }
 
     // Calculates coordinates of all regions that may contain entities within view from the specified viewDoord/viewDstance
-    public List<Vector2Int> GetRegionsInView (Vector2Int viewCoord, float viewDistance) {
-        List<Vector2Int> regions = new List<Vector2Int> ();
+    public List<Coord> GetRegionsInView (Coord viewCoord, float viewDistance) {
+        List<Coord> regions = new List<Coord> ();
         int originRegionX = viewCoord.x / regionSize;
         int originRegionY = viewCoord.y / regionSize;
         float sqrViewDst = viewDistance * viewDistance;
@@ -48,7 +48,7 @@ public class Map {
                     float oy = Mathf.Max (0, Mathf.Abs (viewCentre.y - centres[viewedRegionX, viewedRegionY].y) - regionSize / 2f);
                     float sqrDstFromRegionEdge = ox * ox + oy * oy;
                     if (sqrDstFromRegionEdge <= sqrViewDst) {
-                        regions.Add (new Vector2Int (viewedRegionX, viewedRegionY));
+                        regions.Add (new Coord (viewedRegionX, viewedRegionY));
                     }
                 }
             }
@@ -56,7 +56,7 @@ public class Map {
         return regions;
     }
 
-    public void Add (LivingEntity e, Vector2Int coord) {
+    public void Add (LivingEntity e, Coord coord) {
         int regionX = coord.x / regionSize;
         int regionY = coord.y / regionSize;
 
@@ -67,7 +67,7 @@ public class Map {
         map[regionX, regionY].Add (e);
     }
 
-    public void Remove (LivingEntity e, Vector2Int coord) {
+    public void Remove (LivingEntity e, Coord coord) {
         int regionX = coord.x / regionSize;
         int regionY = coord.y / regionSize;
 
@@ -82,12 +82,12 @@ public class Map {
         map[regionX, regionY].RemoveAt (lastElementIndex);
     }
 
-    public void Move (LivingEntity e, Vector2Int fromCoord, Vector2Int toCoord) {
+    public void Move (LivingEntity e, Coord fromCoord, Coord toCoord) {
         Remove (e, fromCoord);
         Add (e, toCoord);
     }
 
-    public void DrawDebugGizmos (Vector2Int coord, float viewDst) {
+    public void DrawDebugGizmos (Coord coord, float viewDst) {
         // Settings:
         bool showViewedRegions = false;
         bool showOccupancy = true;
@@ -113,7 +113,7 @@ public class Map {
         }
         // Highlight regions in view
         if (showViewedRegions) {
-            List<Vector2Int> regionsInView = GetRegionsInView (coord, viewDst);
+            List<Coord> regionsInView = GetRegionsInView (coord, viewDst);
 
             for (int y = 0; y < numRegions; y++) {
                 for (int x = 0; x < numRegions; x++) {

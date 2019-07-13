@@ -12,15 +12,15 @@ public class Animal : LivingEntity {
 
     // Hop data:
     bool hopping;
-    Vector2Int hopStartCoord;
-    Vector2Int targetCoord;
+    Coord hopStartCoord;
+    Coord targetCoord;
     Vector3 hopStart;
     Vector3 hopTarget;
     float hopTime;
     float hopSpeedFactor;
     float hopHeightFactor;
 
-    public override void SetCoord (Vector2Int coord) {
+    public override void SetCoord (Coord coord) {
         base.SetCoord (coord);
         this.coord = coord;
         hopStartCoord = coord;
@@ -35,23 +35,23 @@ public class Animal : LivingEntity {
         StartHopToCoord (Environment.GetNextTileWeighted (coord, hopStartCoord));
     }
 
-    protected void StartHopToCoord (Vector2Int target) {
+    protected void StartHopToCoord (Coord target) {
         hopStartCoord = coord;
         targetCoord = target;
         hopStart = transform.position;
         hopTarget = Environment.tileCentres[targetCoord.x, targetCoord.y];
         hopping = true;
 
-        bool diagonalHop = (hopStartCoord - targetCoord).sqrMagnitude > 1;
+        bool diagonalHop = Coord.SqrDistance (hopStartCoord, targetCoord) > 1;
         hopHeightFactor = (diagonalHop) ? 1.4142f : 1;
         hopSpeedFactor = (diagonalHop) ? 0.7071f : 1;
 
         LookAt (targetCoord);
     }
 
-    protected void LookAt (Vector2Int target) {
+    protected void LookAt (Coord target) {
         if (target != coord) {
-            Vector2Int offset = target - coord;
+            Coord offset = target - coord;
             transform.eulerAngles = Vector3.up * Mathf.Atan2 (offset.x, offset.y) * Mathf.Rad2Deg;
         }
     }

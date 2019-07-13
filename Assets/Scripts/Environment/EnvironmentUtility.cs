@@ -64,7 +64,7 @@ public static class EnvironmentUtility {
     }
 
     // returns null if path is obstructed
-    public static Vector2Int[] GetPath (int x, int y, int x2, int y2) {
+    public static Coord[] GetPath (int x, int y, int x2, int y2) {
         // bresenham line algorithm
         int w = x2 - x;
         int h = y2 - y;
@@ -99,7 +99,7 @@ public static class EnvironmentUtility {
         }
 
         int numerator = longest >> 1;
-        Vector2Int[] path = new Vector2Int[longest];
+        Coord[] path = new Coord[longest];
         for (int i = 1; i <= longest; i++) {
             numerator += shortest;
             if (numerator >= longest) {
@@ -114,7 +114,7 @@ public static class EnvironmentUtility {
             if (!Environment.walkable[x, y]) {
                 return null;
             }
-            path[i - 1] = new Vector2Int (x, y);
+            path[i - 1] = new Coord (x, y);
         }
         return path;
     }

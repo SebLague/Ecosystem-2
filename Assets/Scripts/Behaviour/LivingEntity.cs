@@ -2,12 +2,12 @@
 
 public class LivingEntity : MonoBehaviour {
 
-    public Vector2Int coord { get; protected set; }
+    public Coord coord { get; protected set; }
     //
     public int mapIndex { get; set; }
-    public Vector2Int mapCoord { get; set; }
+    public Coord mapCoord { get; set; }
 
-    public virtual void SetCoord (Vector2Int coord) {
+    public virtual void SetCoord (Coord coord) {
         this.coord = coord;
         transform.position = Environment.tileCentres[coord.x, coord.y];
     }
