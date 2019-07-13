@@ -14,15 +14,14 @@ public class Environment : MonoBehaviour {
     public static bool[, ] walkable;
     static int size;
     static Vector2Int[, ][] walkableNeighboursMap;
+    
+    // array of visible tiles from any tile, ordered nearest to furthest. cached on request.
     static Vector2Int[, ][] visibleTilesMap;
     static bool[, ] visibilityCalculatedFlags;
-    static System.Random prng;
-    TerrainGenerator.TerrainData terrainData;
 
-    // Temp:
+    static System.Random prng;
     static Vector2Int[] viewOffsetsByDistance;
-    static Vector2Int[] visibleTilesTempBuffer;
-    static int[] visibleTileDistancesTempBuffer;
+    TerrainGenerator.TerrainData terrainData;
 
     void Start () {
         prng = new System.Random ();
@@ -101,9 +100,23 @@ public class Environment : MonoBehaviour {
         visibleTilesMap = new Vector2Int[size, size][];
         visibilityCalculatedFlags = new bool[size, size];
 
-        int bufferSize = (Animal.maxViewDistance * 2 + 1) * (Animal.maxViewDistance * 2 + 1);
-        visibleTilesTempBuffer = new Vector2Int[bufferSize];
-        visibleTileDistancesTempBuffer = new int[bufferSize];
+        // 
+        List<Vector2Int> viewOffsetsList = new List<Vector2Int> ();
+
+        int viewRadius = Animal.maxViewDistance;
+        int sqrViewRadius = viewRadius * viewRadius;
+
+        for (int offsetY = -viewRadius; offsetY <= viewRadius; offsetY++) {
+            for (int offsetX = -viewRadius; offsetX <= viewRadius; offsetX++) {
+                int sqrOffsetDst = offsetX * offsetX + offsetY * offsetY;
+                if ((offsetX != 0 || offsetY != 0) && sqrOffsetDst <= sqrViewRadius) {
+                    viewOffsetsList.Add (new Vector2Int (offsetX, offsetY));
+                }
+            }
+        }
+
+        viewOffsetsList.Sort ((a, b) => (a.x * a.x + a.y * a.y).CompareTo (b.x * b.x + b.y * b.y));
+        viewOffsetsByDistance = viewOffsetsList.ToArray ();
 
         // Find and store all walkable neighbours for each walkable tile on the map
         for (int y = 0; y < terrainData.size; y++) {
@@ -149,56 +162,32 @@ public class Environment : MonoBehaviour {
         }
     }
 
+    // Cache all tiles visible from the current coord, ordered by dst (nearest to furthest)
     static void CacheVisiblity (Vector2Int coord) {
         visibilityCalculatedFlags[coord.x, coord.y] = true;
 
         int x = coord.x;
         int y = coord.y;
-        int viewRadius = Animal.maxViewDistance;
-        int sqrViewRadius = viewRadius * viewRadius;
-
         int visibleTileIndex = 0;
-        for (int offsetY = -viewRadius; offsetY <= viewRadius; offsetY++) {
-            for (int offsetX = -viewRadius; offsetX <= viewRadius; offsetX++) {
-                int sqrOffsetDst = offsetX * offsetX + offsetY * offsetY;
-                if ((offsetX != 0 || offsetY != 0) && sqrOffsetDst <= sqrViewRadius) {
-                    int targetX = x + offsetX;
-                    int targetY = y + offsetY;
-                    if (targetX >= 0 && targetX < size && targetY >= 0 && targetY < size) {
-                        if (walkable[targetX, targetY]) {
-                            if (EnvironmentUtility.TileIsVisibile (x, y, targetX, targetY)) {
-                                visibleTilesTempBuffer[visibleTileIndex] = new Vector2Int (targetX, targetY);
-                                visibleTileDistancesTempBuffer[visibleTileIndex] = sqrOffsetDst;
-                                visibleTileIndex++;
-                            }
-                        }
+        Vector2Int[] visibleTiles = new Vector2Int[viewOffsetsByDistance.Length];
+
+        for (int i = 0; i < viewOffsetsByDistance.Length; i++) {
+            int targetX = x + viewOffsetsByDistance[i].x;
+            int targetY = y + viewOffsetsByDistance[i].y;
+            if (targetX >= 0 && targetX < size && targetY >= 0 && targetY < size) {
+                if (walkable[targetX, targetY]) {
+                    if (EnvironmentUtility.TileIsVisibile (x, y, targetX, targetY)) {
+                        visibleTiles[visibleTileIndex] = new Vector2Int (targetX, targetY);
+                        visibleTileIndex++;
                     }
                 }
             }
         }
 
-        int numVisibleTiles = visibleTileIndex;
-        visibleTilesMap[x, y] = new Vector2Int[numVisibleTiles];
-
-        // Sort visible tiles from closest to furthest
-        for (int i = 0; i < numVisibleTiles - 1; i++) {
-            for (int j = i + 1; j > 0; j--) {
-                if (visibleTileDistancesTempBuffer[j - 1] > visibleTileDistancesTempBuffer[j]) {
-                    // Swap distances
-                    int tempDst = visibleTileDistancesTempBuffer[j - 1];
-                    visibleTileDistancesTempBuffer[j - 1] = visibleTileDistancesTempBuffer[j];
-                    visibleTileDistancesTempBuffer[j] = tempDst;
-
-                    // Swap tile
-                    Vector2Int tempTile = visibleTilesTempBuffer[j - 1];
-                    visibleTilesTempBuffer[j - 1] = visibleTilesTempBuffer[j];
-                    visibleTilesTempBuffer[j] = tempTile;
-                }
-            }
-        }
+        visibleTilesMap[x, y] = new Vector2Int[visibleTileIndex];
 
         for (int i = 0; i < visibleTileIndex; i++) {
-            visibleTilesMap[x, y][i] = visibleTilesTempBuffer[i];
+            visibleTilesMap[x, y][i] = visibleTiles[i];
         }
 
     }
