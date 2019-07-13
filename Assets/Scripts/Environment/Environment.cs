@@ -23,29 +23,36 @@ public class Environment : MonoBehaviour {
     static Vector2Int[] viewOffsetsByDistance;
     TerrainGenerator.TerrainData terrainData;
 
-    Map map;
+    static Map map;
 
     [Header ("Debug")]
+    public bool showMapDebug;
     public Transform mapCoordTransform;
     public float mapViewDst;
 
     void Start () {
         prng = new System.Random ();
 
-        CreateTerrain ();
+        Init ();
         SpawnInitialPopulations ();
 
-        map = new Map (size, 10);
     }
 
     void OnDrawGizmos () {
-        if (map != null && mapCoordTransform != null) {
-            Vector2Int coord = new Vector2Int ((int) mapCoordTransform.position.x, (int) mapCoordTransform.position.z);
-            map.DrawDebugGizmos (coord, mapViewDst);
+        if (showMapDebug) {
+            if (map != null && mapCoordTransform != null) {
+                Vector2Int coord = new Vector2Int ((int) mapCoordTransform.position.x, (int) mapCoordTransform.position.z);
+                map.DrawDebugGizmos (coord, mapViewDst);
+            }
         }
     }
 
+    public static void RegisterMove (LivingEntity entity, Vector2Int from, Vector2Int to) {
+        map.Move (entity, from, to);
+    }
+
     public static Vector2Int[] Sense (Vector2Int coord) {
+        return null;
         if (!visibilityCalculatedFlags[coord.x, coord.y]) {
             CacheVisiblity (coord);
         }
@@ -104,7 +111,7 @@ public class Environment : MonoBehaviour {
     }
 
     // Call terrain generator and cache useful info
-    void CreateTerrain () {
+    void Init () {
         var terrainGenerator = FindObjectOfType<TerrainGenerator> ();
         terrainData = terrainGenerator.Generate ();
         tileCentres = terrainData.tileCentres;
@@ -114,6 +121,8 @@ public class Environment : MonoBehaviour {
         walkableNeighboursMap = new Vector2Int[size, size][];
         visibleTilesMap = new Vector2Int[size, size][];
         visibilityCalculatedFlags = new bool[size, size];
+
+        map = new Map (size, 10);
 
         // 
         List<Vector2Int> viewOffsetsList = new List<Vector2Int> ();
@@ -173,6 +182,7 @@ public class Environment : MonoBehaviour {
 
                 var entity = Instantiate (pop.prefab);
                 entity.SetCoord (coord);
+                map.Add (entity, coord);
             }
         }
     }

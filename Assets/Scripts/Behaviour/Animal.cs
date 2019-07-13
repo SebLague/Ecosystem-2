@@ -68,9 +68,11 @@ public class Animal : LivingEntity {
         float height = (1 - 4 * (hopTime - .5f) * (hopTime - .5f)) * hopHeight * hopHeightFactor;
         transform.position = Vector3.Lerp (hopStart, hopTarget, hopTime) + Vector3.up * height;
         if (hopTime >= 1) {
-            hopTime = 0;
-            coord = targetCoord;
             hopping = false;
+            hopTime = 0;
+
+            Environment.RegisterMove (this, coord, targetCoord);
+            coord = targetCoord;
             ChooseNextAction ();
         }
     }

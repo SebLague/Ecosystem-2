@@ -63,6 +63,7 @@ public class Map {
         int index = map[regionX, regionY].Count;
         // store the entity's index in the list inside the entity itself for quick access
         e.mapIndex = index;
+        e.mapCoord = coord;
         map[regionX, regionY].Add (e);
     }
 
@@ -75,6 +76,7 @@ public class Map {
         // If this entity is not last in the list, put the last entity in its place
         if (index != lastElementIndex) {
             map[regionX, regionY][index] = map[regionX, regionY][lastElementIndex];
+            map[regionX, regionY][index].mapIndex = e.mapIndex;
         }
         // Remove last entity from the list
         map[regionX, regionY].RemoveAt (lastElementIndex);
@@ -86,8 +88,13 @@ public class Map {
     }
 
     public void DrawDebugGizmos (Vector2Int coord, float viewDst) {
-        float height = 2;
+        // Settings:
+        bool showViewedRegions = false;
+        bool showOccupancy = true;
+        float height = Environment.tileCentres[0, 0].y + 0.1f;
         Gizmos.color = Color.black;
+
+        // Draw:
         int regionX = coord.x / regionSize;
         int regionY = coord.y / regionSize;
 
@@ -97,24 +104,53 @@ public class Map {
             Gizmos.DrawLine (new Vector3 (0, height, i * regionSize), new Vector3 (regionSize * numRegions, height, i * regionSize));
         }
 
-        // Draw region centres and highlight regions in view
-        List<Vector2Int> regionsInView = GetRegionsInView (coord, viewDst);
-
+        // Draw region centres
         for (int y = 0; y < numRegions; y++) {
             for (int x = 0; x < numRegions; x++) {
                 Vector3 centre = new Vector3 (centres[x, y].x, height, centres[x, y].y);
                 Gizmos.DrawSphere (centre, .3f);
+            }
+        }
+        // Highlight regions in view
+        if (showViewedRegions) {
+            List<Vector2Int> regionsInView = GetRegionsInView (coord, viewDst);
 
-                foreach (var regionInView in regionsInView) {
-                    if (regionInView.x == x && regionInView.y == y) {
-                        bool isCurrentRegion = x == regionX && y == regionY;
-                        var prevCol = Gizmos.color;
-                        Gizmos.color = (isCurrentRegion) ? new Color (1, 0, 0, .5f) : new Color (1, 0, 0, .25f);
-                        Gizmos.DrawCube (centre, new Vector3 (regionSize, .1f, regionSize));
-                        Gizmos.color = prevCol;
+            for (int y = 0; y < numRegions; y++) {
+                for (int x = 0; x < numRegions; x++) {
+                    Vector3 centre = new Vector3 (centres[x, y].x, height, centres[x, y].y);
+                    foreach (var regionInView in regionsInView) {
+                        if (regionInView.x == x && regionInView.y == y) {
+                            bool isCurrentRegion = x == regionX && y == regionY;
+                            var prevCol = Gizmos.color;
+                            Gizmos.color = (isCurrentRegion) ? new Color (1, 0, 0, .5f) : new Color (1, 0, 0, .25f);
+                            Gizmos.DrawCube (centre, new Vector3 (regionSize, .1f, regionSize));
+                            Gizmos.color = prevCol;
+                        }
                     }
                 }
+            }
+        }
 
+        if (showOccupancy) {
+            int maxOccupants = 0;
+            for (int y = 0; y < numRegions; y++) {
+                for (int x = 0; x < numRegions; x++) {
+                    maxOccupants = Mathf.Max (maxOccupants, map[x, y].Count);
+                }
+            }
+            if (maxOccupants > 0) {
+                for (int y = 0; y < numRegions; y++) {
+                    for (int x = 0; x < numRegions; x++) {
+                        Vector3 centre = new Vector3 (centres[x, y].x, height, centres[x, y].y);
+                        int numOccupants = map[x, y].Count;
+                        if (numOccupants > 0) {
+                            var prevCol = Gizmos.color;
+                            Gizmos.color = new Color (1, 0, 0, numOccupants / (float) maxOccupants);
+                            Gizmos.DrawCube (centre, new Vector3 (regionSize, .1f, regionSize));
+                            Gizmos.color = prevCol;
+                        }
+                    }
+                }
             }
         }
     }
