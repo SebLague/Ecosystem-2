@@ -13,9 +13,11 @@ public class Environment : MonoBehaviour {
     public static Vector3[, ] tileCentres;
     public static bool[, ] walkable;
     static int size;
-    static WalkableNeigbours[, ] walkableNeighboursMap;
+    static Vector2Int[, ][] walkableNeighboursMap;
+    static Vector2Int[, ][] visibleTilesMap;
+    static bool[, ] visibilityCalculatedFlags;
     static System.Random prng;
-
+    static Vector2Int[] visibleTilesTempBuffer;
     TerrainGenerator.TerrainData terrainData;
 
     void Start () {
@@ -25,12 +27,19 @@ public class Environment : MonoBehaviour {
         SpawnInitialPopulations ();
     }
 
+    public static Vector2Int[] Sense (Vector2Int coord) {
+        if (!visibilityCalculatedFlags[coord.x, coord.y]) {
+            CacheVisiblity (coord);
+        }
+        return visibleTilesMap[coord.x, coord.y];
+    }
+
     public static Vector2Int GetNextTileRandom (Vector2Int current) {
         var neighbours = walkableNeighboursMap[current.x, current.y];
-        if (neighbours.count == 0) {
+        if (neighbours.Length == 0) {
             return current;
         }
-        return neighbours.coords[prng.Next (neighbours.count)];
+        return neighbours[prng.Next (neighbours.Length)];
     }
 
     /// Get random neighbour tile, weighted towards those in similar direction as currently facing
@@ -54,7 +63,7 @@ public class Environment : MonoBehaviour {
 
         // Get walkable neighbours
         var neighbours = walkableNeighboursMap[current.x, current.y];
-        if (neighbours.count == 0) {
+        if (neighbours.Length == 0) {
             return current;
         }
 
@@ -64,7 +73,7 @@ public class Environment : MonoBehaviour {
         Vector2Int bestNeighbour = current;
 
         for (int i = 0; i < weightingIterations; i++) {
-            Vector2Int neighbour = neighbours.coords[prng.Next (neighbours.count)];
+            Vector2Int neighbour = neighbours[prng.Next (neighbours.Length)];
             Vector2 offset = neighbour - current;
             float score = Vector2.Dot (offset.normalized, forwardDir);
             if (score > bestScore) {
@@ -76,6 +85,7 @@ public class Environment : MonoBehaviour {
         return bestNeighbour;
     }
 
+    // Call terrain generator and cache useful info
     void CreateTerrain () {
         var terrainGenerator = FindObjectOfType<TerrainGenerator> ();
         terrainData = terrainGenerator.Generate ();
@@ -83,7 +93,11 @@ public class Environment : MonoBehaviour {
         walkable = terrainData.walkable;
         size = terrainData.size;
 
-        walkableNeighboursMap = new WalkableNeigbours[size, size];
+        walkableNeighboursMap = new Vector2Int[size, size][];
+        visibleTilesMap = new Vector2Int[size, size][];
+        visibilityCalculatedFlags = new bool[size, size];
+        int bufferSize = (Animal.maxViewDistance * 2 + 1) * (Animal.maxViewDistance * 2 + 1);
+        visibleTilesTempBuffer = new Vector2Int[bufferSize];
 
         // Find and store all walkable neighbours for each walkable tile on the map
         for (int y = 0; y < terrainData.size; y++) {
@@ -103,7 +117,7 @@ public class Environment : MonoBehaviour {
                             }
                         }
                     }
-                    walkableNeighboursMap[x, y] = new WalkableNeigbours { coords = walkableNeighbours.ToArray (), count = walkableNeighbours.Count };
+                    walkableNeighboursMap[x, y] = walkableNeighbours.ToArray ();
                 }
             }
         }
@@ -129,14 +143,42 @@ public class Environment : MonoBehaviour {
         }
     }
 
+    static void CacheVisiblity (Vector2Int coord) {
+        visibilityCalculatedFlags[coord.x, coord.y] = true;
+
+        int x = coord.x;
+        int y = coord.y;
+        int viewRadius = Animal.maxViewDistance;
+        int sqrViewRadius = viewRadius * viewRadius;
+
+        int visibleTileIndex = 0;
+        for (int offsetY = -viewRadius; offsetY <= viewRadius; offsetY++) {
+            for (int offsetX = -viewRadius; offsetX <= viewRadius; offsetX++) {
+                int sqrOffsetDst = offsetX * offsetX + offsetY * offsetY;
+                if ((offsetX != 0 || offsetY != 0) && sqrOffsetDst <= sqrViewRadius) {
+                    int targetX = x + offsetX;
+                    int targetY = y + offsetY;
+                    if (targetX >= 0 && targetX < size && targetY >= 0 && targetY < size) {
+                        if (walkable[targetX, targetY]) {
+                            if (EnvironmentUtility.TileIsVisibile (x, y, targetX, targetY)) {
+                                visibleTilesTempBuffer[visibleTileIndex] = new Vector2Int (targetX, targetY);
+                                visibleTileIndex++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        visibleTilesMap[x, y] = new Vector2Int[visibleTileIndex];
+        for (int i = 0; i < visibleTileIndex; i++) {
+            visibleTilesMap[x, y][i] = visibleTilesTempBuffer[i];
+        }
+
+    }
+
     [System.Serializable]
     public struct Population {
         public LivingEntity prefab;
         public int count;
-    }
-
-    public struct WalkableNeigbours {
-        public int count;
-        public Vector2Int[] coords;
     }
 }

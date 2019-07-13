@@ -4,8 +4,13 @@ using UnityEngine;
 
 public class Animal : LivingEntity {
 
+    public const int maxViewDistance = 10;
+
+    // Settings:
     float hopHeight = .2f;
     float hopSpeed = 1.5f;
+
+    // State:
     Vector2Int coord;
 
     // Hop data:
@@ -25,10 +30,11 @@ public class Animal : LivingEntity {
 
     }
     protected virtual void Start () {
-        OnFinishedMoving ();
+        ChooseNextAction ();
     }
 
-    protected virtual void OnFinishedMoving () {
+    protected virtual void ChooseNextAction () {
+        Environment.Sense (coord);
         StartHopToCoord (Environment.GetNextTileWeighted (coord, hopStartCoord));
     }
 
@@ -67,7 +73,16 @@ public class Animal : LivingEntity {
         if (hopTime >= 1) {
             hopTime = 0;
             coord = targetCoord;
-            OnFinishedMoving ();
+            hopping = false;
+            ChooseNextAction ();
+        }
+    }
+
+    void OnDrawGizmosSelected () {
+        var x = Environment.Sense (coord);
+        Gizmos.color = Color.red;
+        foreach (var v in x) {
+            Gizmos.DrawSphere (Environment.tileCentres[v.x, v.y], .3f);
         }
     }
 
