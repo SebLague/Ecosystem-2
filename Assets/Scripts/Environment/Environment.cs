@@ -6,10 +6,12 @@ using UnityEngine;
 public class Environment : MonoBehaviour {
 
     public int spawnSeed;
+
     public Population[] initialPopulations;
+
+    // Cached data:
     public static Vector3[, ] tileCentres;
     public static bool[, ] walkable;
-
     static int size;
     static WalkableNeigbours[, ] walkableNeighboursMap;
     static System.Random prng;
@@ -32,7 +34,7 @@ public class Environment : MonoBehaviour {
     }
 
     /// Get random neighbour tile, weighted towards those in similar direction as currently facing
-    public static Vector2Int GetNextTileWeighted (Vector2Int current, Vector2Int previous, double forwardProbability = 0.0, int weightingIterations = 3) {
+    public static Vector2Int GetNextTileWeighted (Vector2Int current, Vector2Int previous, double forwardProbability = 0.2, int weightingIterations = 3) {
 
         if (current == previous) {
             return GetNextTileRandom (current);
@@ -121,15 +123,15 @@ public class Environment : MonoBehaviour {
                 Vector2Int coord = spawnCoords[spawnCoordIndex];
                 spawnCoords.RemoveAt (spawnCoordIndex);
 
-                var animal = Instantiate (pop.animalPrefab);
-                animal.SetCoord (coord);
+                var entity = Instantiate (pop.prefab);
+                entity.SetCoord (coord);
             }
         }
     }
 
     [System.Serializable]
     public struct Population {
-        public Animal animalPrefab;
+        public LivingEntity prefab;
         public int count;
     }
 

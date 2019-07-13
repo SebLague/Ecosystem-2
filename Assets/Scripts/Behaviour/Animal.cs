@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Animal : MonoBehaviour {
+public class Animal : LivingEntity {
 
     float hopHeight = .2f;
     float hopSpeed = 1.5f;
@@ -18,8 +18,8 @@ public class Animal : MonoBehaviour {
     float hopSpeedFactor;
     float hopHeightFactor;
 
-    public void SetCoord (Vector2Int coord) {
-        transform.position = Environment.tileCentres[coord.x, coord.y];
+    public override void SetCoord (Vector2Int coord) {
+        base.SetCoord (coord);
         this.coord = coord;
         hopStartCoord = coord;
 
