@@ -30,6 +30,7 @@ public class Map {
     // Calculates coordinates of all regions that may contain entities within view from the specified viewDoord/viewDstance
     public List<Coord> GetRegionsInView (Coord viewCoord, float viewDistance) {
         List<Coord> regions = new List<Coord> ();
+        List<float> regionDistances = new List<float> ();
         int originRegionX = viewCoord.x / regionSize;
         int originRegionY = viewCoord.y / regionSize;
         float sqrViewDst = viewDistance * viewDistance;
@@ -48,11 +49,27 @@ public class Map {
                     float oy = Mathf.Max (0, Mathf.Abs (viewCentre.y - centres[viewedRegionX, viewedRegionY].y) - regionSize / 2f);
                     float sqrDstFromRegionEdge = ox * ox + oy * oy;
                     if (sqrDstFromRegionEdge <= sqrViewDst) {
+                        regionDistances.Add (sqrDstFromRegionEdge);
                         regions.Add (new Coord (viewedRegionX, viewedRegionY));
                     }
                 }
             }
         }
+
+        // Sort the regions list from nearest to farthest
+        for (int i = 0; i < regions.Count - 1; i++) {
+            for (int j = i + 1; j > 0; j--) {
+                if (regionDistances[j - 1] > regionDistances[j]) {
+                    float tempDst = regionDistances[j - 1];
+                    Coord tempRegion = regions[j - 1];
+                    regionDistances[j - 1] = regionDistances[j];
+                    regionDistances[j] = tempDst;
+                    regions[j - 1] = regions[j];
+                    regions[j] = tempRegion;
+                }
+            }
+        }
+
         return regions;
     }
 
@@ -89,8 +106,8 @@ public class Map {
 
     public void DrawDebugGizmos (Coord coord, float viewDst) {
         // Settings:
-        bool showViewedRegions = false;
-        bool showOccupancy = true;
+        bool showViewedRegions = true;
+        bool showOccupancy = false;
         float height = Environment.tileCentres[0, 0].y + 0.1f;
         Gizmos.color = Color.black;
 
@@ -118,11 +135,10 @@ public class Map {
             for (int y = 0; y < numRegions; y++) {
                 for (int x = 0; x < numRegions; x++) {
                     Vector3 centre = new Vector3 (centres[x, y].x, height, centres[x, y].y);
-                    foreach (var regionInView in regionsInView) {
-                        if (regionInView.x == x && regionInView.y == y) {
-                            bool isCurrentRegion = x == regionX && y == regionY;
+                    for (int i = 0; i < regionsInView.Count; i++) {
+                        if (regionsInView[i].x == x && regionsInView[i].y == y) {
                             var prevCol = Gizmos.color;
-                            Gizmos.color = (isCurrentRegion) ? new Color (1, 0, 0, .5f) : new Color (1, 0, 0, .25f);
+                            Gizmos.color = new Color (1, 0, 0, 1 - i / Mathf.Max (1, regionsInView.Count - 1f));
                             Gizmos.DrawCube (centre, new Vector3 (regionSize, .1f, regionSize));
                             Gizmos.color = prevCol;
                         }
