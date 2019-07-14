@@ -118,4 +118,50 @@ public static class EnvironmentUtility {
         }
         return path;
     }
+
+    public static Coord GetNextInPath (int x, int y, int targetX, int targetY) {
+        // bresenham line algorithm
+        int w = targetX - x;
+        int h = targetY - y;
+        int absW = System.Math.Abs (w);
+        int absH = System.Math.Abs (h);
+
+        int dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
+        if (w < 0) {
+            dx1 = -1;
+            dx2 = -1;
+        } else if (w > 0) {
+            dx1 = 1;
+            dx2 = 1;
+        }
+        if (h < 0) {
+            dy1 = -1;
+        } else if (h > 0) {
+            dy1 = 1;
+        }
+
+        int longest = absW;
+        int shortest = absH;
+        if (longest <= shortest) {
+            longest = absH;
+            shortest = absW;
+            if (h < 0) {
+                dy2 = -1;
+            } else if (h > 0) {
+                dy2 = 1;
+            }
+            dx2 = 0;
+        }
+
+        int numerator = longest >> 1 + shortest;
+        if (numerator >= longest) {
+            x += dx1;
+            y += dy1;
+        } else {
+            x += dx2;
+            y += dy2;
+        }
+
+        return new Coord (x, y);
+    }
 }

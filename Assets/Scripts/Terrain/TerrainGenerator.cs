@@ -100,13 +100,6 @@ namespace TerrainGeneration {
                     triangles.Add (vertIndex + 3);
                     triangles.Add (vertIndex + 2);
 
-                    // Terrain data:
-                    terrainData.tileCentres[x, y] = nw + new Vector3 (0.5f, 0, -0.5f);
-                    terrainData.walkable[x, y] = isLandTile;
-                    if (isLandTile) {
-                        terrainData.landCoords.Add (new Coord (x, y));
-                    }
-
                     // Bridge gaps between water and land tiles, and also fill in sides of map
                     bool isEdgeTile = x == 0 || x == numTilesPerLine - 1 || y == 0 || y == numTilesPerLine - 1;
                     if (isLandTile || isEdgeTile) {
@@ -143,6 +136,10 @@ namespace TerrainGeneration {
                             }
                         }
                     }
+
+                    // Terrain data:
+                    terrainData.tileCentres[x, y] = nw + new Vector3 (0.5f, 0, -0.5f);
+                    terrainData.walkable[x, y] = isLandTile;
                 }
             }
 
@@ -235,13 +232,11 @@ namespace TerrainGeneration {
             public Vector3[, ] tileCentres;
             public bool[, ] walkable;
             public bool[, ] shore;
-            public List<Coord> landCoords;
 
             public TerrainData (int size) {
                 this.size = size;
                 tileCentres = new Vector3[size, size];
                 walkable = new bool[size, size];
-                landCoords = new List<Coord> ();
                 shore = new bool[size, size];
             }
         }

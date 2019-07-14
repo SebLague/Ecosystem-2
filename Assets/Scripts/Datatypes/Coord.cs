@@ -19,6 +19,10 @@ public struct Coord {
         return (float) System.Math.Sqrt ((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
     }
 
+    public static bool AreNeighbours (Coord a, Coord b) {
+        return System.Math.Abs (a.x - b.x) <= 1 && System.Math.Abs (a.y - b.y) <= 1;
+    }
+
     public static Coord invalid {
         get {
             return new Coord (-1, -1);

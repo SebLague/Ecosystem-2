@@ -5,25 +5,36 @@ using UnityEngine;
 public class Animal : LivingEntity {
 
     public const int maxViewDistance = 10;
+    public enum CreatureAction { Resting, Exploring, GoingToFood, GoingToWater, Eating, Drinking }
+    public enum Diet { Herbivore, Carnivore }
+
+    public Diet diet;
+    public CreatureAction currentAction;
 
     // Settings:
-    float hopHeight = .2f;
-    float hopSpeed = 1.5f;
+    float moveArcHeight = .2f;
+    float moveSpeed = 1.5f;
 
-    // Hop data:
-    bool hopping;
-    Coord hopStartCoord;
-    Coord targetCoord;
-    Vector3 hopStart;
-    Vector3 hopTarget;
-    float hopTime;
-    float hopSpeedFactor;
-    float hopHeightFactor;
+    // State:
+    protected float hunger;
+    protected float thirst;
+
+    protected LivingEntity foodTarget;
+
+    // Move data:
+    bool moving;
+    Coord moveFromCoord;
+    Coord moveTargetCoord;
+    Vector3 moveStartPos;
+    Vector3 moveTargetPos;
+    float moveTime;
+    float moveSpeedFactor;
+    float moveArcHeightFactor;
 
     public override void SetCoord (Coord coord) {
         base.SetCoord (coord);
         this.coord = coord;
-        hopStartCoord = coord;
+        moveFromCoord = coord;
 
     }
     protected virtual void Start () {
@@ -31,22 +42,36 @@ public class Animal : LivingEntity {
     }
 
     protected virtual void ChooseNextAction () {
-        Environment.Sense (coord);
-        StartHopToCoord (Environment.GetNextTileWeighted (coord, hopStartCoord));
+        Surroundings surroundings = Environment.Sense (coord);
+        if (surroundings.nearestFoodSource != null) {
+            currentAction = CreatureAction.GoingToFood;
+            foodTarget = surroundings.nearestFoodSource;
+        }
+
+        // If exploring, move to random tile
+        if (currentAction == CreatureAction.Exploring) {
+            StartMoveToCoord (Environment.GetNextTileWeighted (coord, moveFromCoord));
+        } else if (currentAction == CreatureAction.GoingToFood) {
+            if (Coord.AreNeighbours (coord, foodTarget.coord)) {
+                currentAction = CreatureAction.Eating;
+            } else {
+                StartMoveToCoord (EnvironmentUtility.GetNextInPath (coord.x, coord.y, foodTarget.coord.x, foodTarget.coord.y));
+            }
+        }
     }
 
-    protected void StartHopToCoord (Coord target) {
-        hopStartCoord = coord;
-        targetCoord = target;
-        hopStart = transform.position;
-        hopTarget = Environment.tileCentres[targetCoord.x, targetCoord.y];
-        hopping = true;
+    protected void StartMoveToCoord (Coord target) {
+        moveFromCoord = coord;
+        moveTargetCoord = target;
+        moveStartPos = transform.position;
+        moveTargetPos = Environment.tileCentres[moveTargetCoord.x, moveTargetCoord.y];
+        moving = true;
 
-        bool diagonalHop = Coord.SqrDistance (hopStartCoord, targetCoord) > 1;
-        hopHeightFactor = (diagonalHop) ? 1.4142f : 1;
-        hopSpeedFactor = (diagonalHop) ? 0.7071f : 1;
+        bool diagonalMove = Coord.SqrDistance (moveFromCoord, moveTargetCoord) > 1;
+        moveArcHeightFactor = (diagonalMove) ? 1.4142f : 1;
+        moveSpeedFactor = (diagonalMove) ? 0.7071f : 1;
 
-        LookAt (targetCoord);
+        LookAt (moveTargetCoord);
     }
 
     protected void LookAt (Coord target) {
@@ -58,33 +83,35 @@ public class Animal : LivingEntity {
 
     protected virtual void Update () {
 
-        if (hopping) {
-            AnimateHop ();
+        if (moving) {
+            AnimateMove ();
         }
     }
 
-    void AnimateHop () {
-        hopTime = Mathf.Min (1, hopTime + Time.deltaTime * hopSpeed * hopSpeedFactor);
-        float height = (1 - 4 * (hopTime - .5f) * (hopTime - .5f)) * hopHeight * hopHeightFactor;
-        transform.position = Vector3.Lerp (hopStart, hopTarget, hopTime) + Vector3.up * height;
-        if (hopTime >= 1) {
-            hopping = false;
-            hopTime = 0;
+    void AnimateMove () {
+        moveTime = Mathf.Min (1, moveTime + Time.deltaTime * moveSpeed * moveSpeedFactor);
+        float height = (1 - 4 * (moveTime - .5f) * (moveTime - .5f)) * moveArcHeight * moveArcHeightFactor;
+        transform.position = Vector3.Lerp (moveStartPos, moveTargetPos, moveTime) + Vector3.up * height;
+        if (moveTime >= 1) {
+            moving = false;
+            moveTime = 0;
 
-            Environment.RegisterMove (this, coord, targetCoord);
-            coord = targetCoord;
+            Environment.RegisterMove (this, coord, moveTargetCoord);
+            coord = moveTargetCoord;
             ChooseNextAction ();
         }
     }
 
     void OnDrawGizmosSelected () {
-        var surroundings = Environment.Sense (coord);
-        Gizmos.color = Color.white;
-        if (surroundings.nearestPlant != null) {
-            Gizmos.DrawLine (transform.position, surroundings.nearestPlant.transform.position);
-        }
-        if (surroundings.nearestWaterTile != Coord.invalid) {
-            Gizmos.DrawLine (transform.position, Environment.tileCentres[surroundings.nearestWaterTile.x, surroundings.nearestWaterTile.y]);
+        if (Application.isPlaying) {
+            var surroundings = Environment.Sense (coord);
+            Gizmos.color = Color.white;
+            if (surroundings.nearestFoodSource != null) {
+                Gizmos.DrawLine (transform.position, surroundings.nearestFoodSource.transform.position);
+            }
+            if (surroundings.nearestWaterTile != Coord.invalid) {
+                Gizmos.DrawLine (transform.position, Environment.tileCentres[surroundings.nearestWaterTile.x, surroundings.nearestWaterTile.y]);
+            }
         }
     }
 

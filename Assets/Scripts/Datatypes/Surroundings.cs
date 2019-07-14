@@ -1,4 +1,4 @@
 ﻿public class Surroundings {
     public Coord nearestWaterTile;
-    public Plant nearestPlant;
+    public LivingEntity nearestFoodSource;
 }
