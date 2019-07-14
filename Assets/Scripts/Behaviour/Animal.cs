@@ -78,10 +78,13 @@ public class Animal : LivingEntity {
     }
 
     void OnDrawGizmosSelected () {
-        var x = Environment.Sense (coord);
-        Gizmos.color = Color.red;
-        foreach (var v in x) {
-            Gizmos.DrawSphere (Environment.tileCentres[v.x, v.y], .3f);
+        var surroundings = Environment.Sense (coord);
+        Gizmos.color = Color.white;
+        if (surroundings.nearestPlant != null) {
+            Gizmos.DrawLine (transform.position, surroundings.nearestPlant.transform.position);
+        }
+        if (surroundings.nearestWaterTile != Coord.invalid) {
+            Gizmos.DrawLine (transform.position, Environment.tileCentres[surroundings.nearestWaterTile.x, surroundings.nearestWaterTile.y]);
         }
     }
 

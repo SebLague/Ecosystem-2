@@ -15,13 +15,14 @@ public class Environment : MonoBehaviour {
     static int size;
     static Coord[, ][] walkableNeighboursMap;
 
-    // array of visible tiles from any tile, ordered nearest to furthest. cached on request.
+    // array of visible tiles from any tile; value is Coord.invalid if no visible water tile
     static Coord[, ] closestVisibleWaterMap;
 
     static System.Random prng;
     TerrainGenerator.TerrainData terrainData;
 
-    static Map map;
+    static Map preyMap;
+    static Map plantMap;
 
     [Header ("Debug")]
     public bool showMapDebug;
@@ -38,21 +39,28 @@ public class Environment : MonoBehaviour {
 
     void OnDrawGizmos () {
         if (showMapDebug) {
-            if (map != null && mapCoordTransform != null) {
+            if (preyMap != null && mapCoordTransform != null) {
                 Coord coord = new Coord ((int) mapCoordTransform.position.x, (int) mapCoordTransform.position.z);
-                map.DrawDebugGizmos (coord, mapViewDst);
+                preyMap.DrawDebugGizmos (coord, mapViewDst);
             }
         }
     }
 
     public static void RegisterMove (LivingEntity entity, Coord from, Coord to) {
-        map.Move (entity, from, to);
+        preyMap.Move (entity, from, to);
     }
 
-    public static Coord[] Sense (Coord coord) {
-        return null;
+    public static void RegisterPlantDeath (Plant plant) {
+        plantMap.Remove (plant, plant.coord);
+    }
 
-        //return visibleTilesMap[coord.x, coord.y];
+    public static Surroundings Sense (Coord coord) {
+        var closestPlant = plantMap.ClosestEntity (coord, Animal.maxViewDistance);
+        var surroundings = new Surroundings ();
+        surroundings.nearestPlant = (Plant) closestPlant;
+        surroundings.nearestWaterTile = closestVisibleWaterMap[coord.x, coord.y];
+
+        return surroundings;
     }
 
     public static Coord GetNextTileRandom (Coord current) {
@@ -119,7 +127,8 @@ public class Environment : MonoBehaviour {
 
         walkableNeighboursMap = new Coord[size, size][];
 
-        map = new Map (size, 10);
+        preyMap = new Map (size, 10);
+        plantMap = new Map (size, 10);
 
         // Find and store all walkable neighbours for each walkable tile on the map
         for (int y = 0; y < terrainData.size; y++) {
@@ -164,6 +173,7 @@ public class Environment : MonoBehaviour {
         closestVisibleWaterMap = new Coord[size, size];
         for (int y = 0; y < terrainData.size; y++) {
             for (int x = 0; x < terrainData.size; x++) {
+                bool foundWater = false;
                 if (walkable[x, y]) {
                     for (int i = 0; i < viewOffsets.Count; i++) {
                         int targetX = x + viewOffsetsArr[i].x;
@@ -171,12 +181,16 @@ public class Environment : MonoBehaviour {
                         if (targetX >= 0 && targetX < size && targetY >= 0 && targetY < size) {
                             if (terrainData.shore[targetX, targetY]) {
                                 if (EnvironmentUtility.TileIsVisibile (x, y, targetX, targetY)) {
-                                    closestVisibleWaterMap[targetX, targetY] = new Coord (targetX, targetY);
+                                    closestVisibleWaterMap[x, y] = new Coord (targetX, targetY);
+                                    foundWater = true;
                                     break;
                                 }
                             }
                         }
                     }
+                }
+                if (!foundWater) {
+                    closestVisibleWaterMap[x, y] = Coord.invalid;
                 }
             }
         }
@@ -199,7 +213,13 @@ public class Environment : MonoBehaviour {
 
                 var entity = Instantiate (pop.prefab);
                 entity.SetCoord (coord);
-                map.Add (entity, coord);
+
+                if (entity is Plant) {
+                    plantMap.Add (entity, coord);
+                } else {
+                    preyMap.Add (entity, coord);
+                    mapCoordTransform = entity.transform;
+                }
             }
         }
     }

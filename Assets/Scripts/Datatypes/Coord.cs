@@ -19,6 +19,12 @@ public struct Coord {
         return (float) System.Math.Sqrt ((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
     }
 
+    public static Coord invalid {
+        get {
+            return new Coord (-1, -1);
+        }
+    }
+
     public static Coord up {
         get {
             return new Coord (0, 1);

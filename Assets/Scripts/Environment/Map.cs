@@ -27,14 +27,43 @@ public class Map {
         }
     }
 
+    public LivingEntity ClosestEntity (Coord origin, float viewDistance) {
+        List<RegionInfo> visibleRegions = GetRegionsInView (origin, viewDistance);
+        LivingEntity closestEntity = null;
+        float closestSqrDst = viewDistance * viewDistance + 0.01f;
+
+        for (int i = 0; i < visibleRegions.Count; i++) {
+            // Stop searching if current closest entity is closer than the dst to the region edge
+            // All remaining regions will be further as well, since sorted by dst
+            if (closestSqrDst <= visibleRegions[i].sqrDstToClosestEdge) {
+                break;
+            }
+
+            Coord regionCoord = visibleRegions[i].coord;
+
+            for (int j = 0; j < map[regionCoord.x, regionCoord.y].Count; j++) {
+                LivingEntity entity = map[regionCoord.x, regionCoord.y][j];
+                float sqrDst = Coord.SqrDistance (entity.coord, origin);
+                if (sqrDst < closestSqrDst) {
+                    if (EnvironmentUtility.TileIsVisibile (origin.x, origin.y, entity.coord.x, entity.coord.y)) {
+                        closestSqrDst = sqrDst;
+                        closestEntity = entity;
+                    }
+                }
+            }
+        }
+
+        return closestEntity;
+    }
+
     // Calculates coordinates of all regions that may contain entities within view from the specified viewDoord/viewDstance
-    public List<Coord> GetRegionsInView (Coord viewCoord, float viewDistance) {
-        List<Coord> regions = new List<Coord> ();
-        List<float> regionDistances = new List<float> ();
-        int originRegionX = viewCoord.x / regionSize;
-        int originRegionY = viewCoord.y / regionSize;
+    // Regions sorted nearest to farthest
+    public List<RegionInfo> GetRegionsInView (Coord origin, float viewDistance) {
+        List<RegionInfo> regions = new List<RegionInfo> ();
+        int originRegionX = origin.x / regionSize;
+        int originRegionY = origin.y / regionSize;
         float sqrViewDst = viewDistance * viewDistance;
-        Vector2 viewCentre = viewCoord + Vector2.one * .5f;
+        Vector2 viewCentre = origin + Vector2.one * .5f;
 
         int searchNum = Mathf.Max (1, Mathf.CeilToInt (viewDistance / regionSize));
         // Loop over all regions that might be within the view dst to check if they actually are
@@ -49,26 +78,15 @@ public class Map {
                     float oy = Mathf.Max (0, Mathf.Abs (viewCentre.y - centres[viewedRegionX, viewedRegionY].y) - regionSize / 2f);
                     float sqrDstFromRegionEdge = ox * ox + oy * oy;
                     if (sqrDstFromRegionEdge <= sqrViewDst) {
-                        regionDistances.Add (sqrDstFromRegionEdge);
-                        regions.Add (new Coord (viewedRegionX, viewedRegionY));
+                        RegionInfo info = new RegionInfo (new Coord (viewedRegionX, viewedRegionY), sqrDstFromRegionEdge);
+                        regions.Add (info);
                     }
                 }
             }
         }
 
         // Sort the regions list from nearest to farthest
-        for (int i = 0; i < regions.Count - 1; i++) {
-            for (int j = i + 1; j > 0; j--) {
-                if (regionDistances[j - 1] > regionDistances[j]) {
-                    float tempDst = regionDistances[j - 1];
-                    Coord tempRegion = regions[j - 1];
-                    regionDistances[j - 1] = regionDistances[j];
-                    regionDistances[j] = tempDst;
-                    regions[j - 1] = regions[j];
-                    regions[j] = tempRegion;
-                }
-            }
-        }
+        regions.Sort ((a, b) => a.sqrDstToClosestEdge.CompareTo (b.sqrDstToClosestEdge));
 
         return regions;
     }
@@ -104,6 +122,16 @@ public class Map {
         Add (e, toCoord);
     }
 
+    public struct RegionInfo {
+        public readonly Coord coord;
+        public readonly float sqrDstToClosestEdge;
+
+        public RegionInfo (Coord coord, float sqrDstToClosestEdge) {
+            this.coord = coord;
+            this.sqrDstToClosestEdge = sqrDstToClosestEdge;
+        }
+    }
+
     public void DrawDebugGizmos (Coord coord, float viewDst) {
         // Settings:
         bool showViewedRegions = true;
@@ -130,15 +158,15 @@ public class Map {
         }
         // Highlight regions in view
         if (showViewedRegions) {
-            List<Coord> regionsInView = GetRegionsInView (coord, viewDst);
+            List<RegionInfo> regionsInView = GetRegionsInView (coord, viewDst);
 
             for (int y = 0; y < numRegions; y++) {
                 for (int x = 0; x < numRegions; x++) {
                     Vector3 centre = new Vector3 (centres[x, y].x, height, centres[x, y].y);
                     for (int i = 0; i < regionsInView.Count; i++) {
-                        if (regionsInView[i].x == x && regionsInView[i].y == y) {
+                        if (regionsInView[i].coord.x == x && regionsInView[i].coord.y == y) {
                             var prevCol = Gizmos.color;
-                            Gizmos.color = new Color (1, 0, 0, 1 - i / Mathf.Max (1, regionsInView.Count - 1f));
+                            Gizmos.color = new Color (1, 0, 0, 1 - i / Mathf.Max (1, regionsInView.Count - 1f) * .5f);
                             Gizmos.DrawCube (centre, new Vector3 (regionSize, .1f, regionSize));
                             Gizmos.color = prevCol;
                         }
