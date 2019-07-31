@@ -2,12 +2,16 @@
 
 public class LivingEntity : MonoBehaviour {
 
-    public Coord coord { get; protected set; }
+    public Coord coord;
     //
-    public int mapIndex { get; set; }
-    public Coord mapCoord { get; set; }
+    [HideInInspector]
+    public int mapIndex;
+    [HideInInspector]
+    public Coord mapCoord;
 
-    public virtual void SetCoord (Coord coord) {
+    protected bool dead;
+
+    public virtual void Init (Coord coord) {
         this.coord = coord;
         transform.position = Environment.tileCentres[coord.x, coord.y];
     }

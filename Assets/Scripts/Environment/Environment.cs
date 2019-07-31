@@ -10,7 +10,7 @@ public class Environment : MonoBehaviour {
     [Header ("Trees")]
     public MeshRenderer treePrefab;
     [Range (0, 1)]
-    public float treePlacementProbability;
+    public float treeProbability;
 
     [Header ("Populations")]
     public Population[] initialPopulations;
@@ -82,6 +82,7 @@ public class Environment : MonoBehaviour {
     public static Coord GetNextTileWeighted (Coord current, Coord previous, double forwardProbability = 0.2, int weightingIterations = 3) {
 
         if (current == previous) {
+
             return GetNextTileRandom (current);
         }
 
@@ -220,7 +221,7 @@ public class Environment : MonoBehaviour {
         for (int y = 0; y < terrainData.size; y++) {
             for (int x = 0; x < terrainData.size; x++) {
                 if (walkable[x, y]) {
-                    if (prng.NextDouble () < treePlacementProbability) {
+                    if (prng.NextDouble () < treeProbability) {
                         // Randomize rot/scale
                         float rotX = Mathf.Lerp (-maxRot, maxRot, (float) spawnPrng.NextDouble ());
                         float rotZ = Mathf.Lerp (-maxRot, maxRot, (float) spawnPrng.NextDouble ());
@@ -265,7 +266,7 @@ public class Environment : MonoBehaviour {
                 spawnCoords.RemoveAt (spawnCoordIndex);
 
                 var entity = Instantiate (pop.prefab);
-                entity.SetCoord (coord);
+                entity.Init (coord);
 
                 if (entity is Plant) {
                     plantMap.Add (entity, coord);

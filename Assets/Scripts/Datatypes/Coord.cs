@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 
 // Replacement for Vector2Int, which was causing slowdowns in big loops due to x,y accessor overhead
+[System.Serializable]
 public struct Coord {
 
-    public readonly int x;
-    public readonly int y;
+    public int x;
+    public int y;
 
     public Coord (int x, int y) {
         this.x = x;
@@ -83,5 +84,9 @@ public struct Coord {
 
     public override int GetHashCode () {
         return 0;
+    }
+
+    public override string ToString () {
+        return "(" + x + " ; " + y + ")";
     }
 }

@@ -71,6 +71,11 @@ public static class EnvironmentUtility {
         int absW = System.Math.Abs (w);
         int absH = System.Math.Abs (h);
 
+        // Is neighbouring tile
+        if (absW <= 1 && absH <= 1) {
+            return null;
+        }
+
         int dx1 = 0, dy1 = 0, dx2 = 0, dy2 = 0;
         if (w < 0) {
             dx1 = -1;
@@ -111,7 +116,9 @@ public static class EnvironmentUtility {
                 y += dy2;
             }
 
-            if (!Environment.walkable[x, y]) {
+            // If not walkable, path is invalid so return null
+            // (unless is target tile, which may be unwalkable e.g water)
+            if (i != longest && !Environment.walkable[x, y]) {
                 return null;
             }
             path[i - 1] = new Coord (x, y);
