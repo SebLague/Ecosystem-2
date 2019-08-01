@@ -121,3 +121,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3fa69f2b3ead4c90bd4ed7635a7df5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  species: 1
+  coord:
+    x: 0
+    y: 0
+  mapIndex: 0
+  mapCoord:
+    x: 0
+    y: 0

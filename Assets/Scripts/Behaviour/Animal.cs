@@ -74,10 +74,16 @@ public class Animal : LivingEntity {
                 ChooseNextAction ();
             }
         }
+
+        if (hunger >= 1) {
+            Die (CauseOfDeath.Hunger);
+        } else if (thirst >= 1) {
+            Die (CauseOfDeath.Thirst);
+        }
     }
 
     // Animals choose their next action after each movement step (1 tile),
-    // or when not moving (e.g interacting with food etc), at fixed time intervals
+    // or, when not moving (e.g interacting with food etc), at a fixed time interval
     protected virtual void ChooseNextAction () {
         lastActionChooseTime = Time.time;
         // Get info about surroundings
@@ -110,14 +116,6 @@ public class Animal : LivingEntity {
 
     }
 
-    protected void CreatePath (Coord target) {
-        // Create new path if current is not already going to target
-        if (path == null || pathIndex >= path.Length || (path[path.Length - 1] != target || path[pathIndex] != coord)) {
-            path = EnvironmentUtility.GetPath (coord.x, coord.y, target.x, target.y);
-            pathIndex = 0;
-        }
-    }
-
     protected void Act () {
         switch (currentAction) {
             case CreatureAction.Exploring:
@@ -128,8 +126,7 @@ public class Animal : LivingEntity {
                     LookAt (foodTarget.coord);
                     currentAction = CreatureAction.Eating;
                 } else {
-                    //StartMoveToCoord (EnvironmentUtility.GetNextInPath (coord.x, coord.y, foodTarget.coord.x, foodTarget.coord.y), true);
-                    StartMoveToCoord (path[pathIndex], true);
+                    StartMoveToCoord (path[pathIndex]);
                     pathIndex++;
                 }
                 break;
@@ -138,15 +135,22 @@ public class Animal : LivingEntity {
                     LookAt (waterTarget);
                     currentAction = CreatureAction.Drinking;
                 } else {
-
-                    StartMoveToCoord (path[pathIndex], true);
+                    StartMoveToCoord (path[pathIndex]);
                     pathIndex++;
                 }
                 break;
         }
     }
 
-    protected void StartMoveToCoord (Coord target, bool followingPath = false) {
+    protected void CreatePath (Coord target) {
+        // Create new path if current is not already going to target
+        if (path == null || pathIndex >= path.Length || (path[path.Length - 1] != target || path[pathIndex] != coord)) {
+            path = EnvironmentUtility.GetPath (coord.x, coord.y, target.x, target.y);
+            pathIndex = 0;
+        }
+    }
+
+    protected void StartMoveToCoord (Coord target) {
         moveFromCoord = coord;
         moveTargetCoord = target;
         moveStartPos = transform.position;
@@ -211,14 +215,11 @@ public class Animal : LivingEntity {
             }
 
             if (currentAction == CreatureAction.GoingToFood) {
-                var next = EnvironmentUtility.GetNextInPath (coord.x, coord.y, foodTarget.coord.x, foodTarget.coord.y);
                 var path = EnvironmentUtility.GetPath (coord.x, coord.y, foodTarget.coord.x, foodTarget.coord.y);
                 Gizmos.color = Color.black;
                 for (int i = 0; i < path.Length; i++) {
                     Gizmos.DrawSphere (Environment.tileCentres[path[i].x, path[i].y], .2f);
                 }
-                Gizmos.color = Color.red;
-                Gizmos.DrawSphere (Environment.tileCentres[next.x, next.y] + Vector3.up * .1f, .25f);
             }
         }
     }

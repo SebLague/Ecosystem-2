@@ -12,10 +12,8 @@ public class Plant : LivingEntity {
 
         transform.localScale = Vector3.one * amountRemaining;
 
-        if (amountRemaining <= 0 && !dead) {
-            Environment.RegisterPlantDeath (this);
-            dead = true;
-            Destroy (gameObject);
+        if (amountRemaining <= 0) {
+            Die (CauseOfDeath.Eaten);
         }
 
         return amountConsumed;

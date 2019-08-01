@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Environment : MonoBehaviour {
 
+    const int mapRegionSize = 10;
+
     public int seed;
 
     [Header ("Trees")]
@@ -33,8 +35,7 @@ public class Environment : MonoBehaviour {
     static System.Random prng;
     TerrainGenerator.TerrainData terrainData;
 
-    static Map preyMap;
-    static Map plantMap;
+    static Map[] speciesMaps;
 
     void Start () {
         prng = new System.Random ();
@@ -45,24 +46,26 @@ public class Environment : MonoBehaviour {
     }
 
     void OnDrawGizmos () {
+        /* 
         if (showMapDebug) {
             if (preyMap != null && mapCoordTransform != null) {
                 Coord coord = new Coord ((int) mapCoordTransform.position.x, (int) mapCoordTransform.position.z);
                 preyMap.DrawDebugGizmos (coord, mapViewDst);
             }
         }
+        */
     }
 
     public static void RegisterMove (LivingEntity entity, Coord from, Coord to) {
-        preyMap.Move (entity, from, to);
+        speciesMaps[(int) entity.species].Move (entity, from, to);
     }
 
-    public static void RegisterPlantDeath (Plant plant) {
-        plantMap.Remove (plant, plant.coord);
+    public static void RegisterDeath (LivingEntity entity) {
+        speciesMaps[(int) entity.species].Remove (entity, entity.coord);
     }
 
     public static Surroundings Sense (Coord coord) {
-        var closestPlant = plantMap.ClosestEntity (coord, Animal.maxViewDistance);
+        var closestPlant = speciesMaps[(int) Species.Plant].ClosestEntity (coord, Animal.maxViewDistance);
         var surroundings = new Surroundings ();
         surroundings.nearestFoodSource = closestPlant;
         surroundings.nearestWaterTile = closestVisibleWaterMap[coord.x, coord.y];
@@ -133,12 +136,15 @@ public class Environment : MonoBehaviour {
         walkable = terrainData.walkable;
         size = terrainData.size;
 
+        // Init species maps
+        speciesMaps = new Map[System.Enum.GetNames (typeof (Species)).Length];
+        for (int i = 0; i < speciesMaps.Length; i++) {
+            speciesMaps[i] = new Map (size, mapRegionSize);
+        }
+
         SpawnTrees ();
 
         walkableNeighboursMap = new Coord[size, size][];
-
-        preyMap = new Map (size, 10);
-        plantMap = new Map (size, 10);
 
         // Find and store all walkable neighbours for each walkable tile on the map
         for (int y = 0; y < terrainData.size; y++) {
@@ -252,6 +258,7 @@ public class Environment : MonoBehaviour {
     }
 
     void SpawnInitialPopulations () {
+
         var spawnPrng = new System.Random (seed);
         var spawnCoords = new List<Coord> (walkableCoords);
 
@@ -268,12 +275,7 @@ public class Environment : MonoBehaviour {
                 var entity = Instantiate (pop.prefab);
                 entity.Init (coord);
 
-                if (entity is Plant) {
-                    plantMap.Add (entity, coord);
-                } else {
-                    preyMap.Add (entity, coord);
-                    mapCoordTransform = entity.transform;
-                }
+                speciesMaps[(int) entity.species].Add (entity, coord);
             }
         }
     }
