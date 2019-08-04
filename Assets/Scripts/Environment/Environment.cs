@@ -29,6 +29,9 @@ public class Environment : MonoBehaviour {
     static Coord[, ][] walkableNeighboursMap;
     static List<Coord> walkableCoords;
 
+    static List<Species>[] preyBySpecies;
+    static List<Species>[] predatorsBySpecies;
+
     // array of visible tiles from any tile; value is Coord.invalid if no visible water tile
     static Coord[, ] closestVisibleWaterMap;
 
@@ -62,6 +65,54 @@ public class Environment : MonoBehaviour {
 
     public static void RegisterDeath (LivingEntity entity) {
         speciesMaps[(int) entity.species].Remove (entity, entity.coord);
+    }
+
+    public static Coord SenseWater (Coord coord) {
+        var closestWaterCoord = closestVisibleWaterMap[coord.x, coord.y];
+        if (closestWaterCoord != Coord.invalid) {
+            float sqrDst = (tileCentres[coord.x, coord.y] - tileCentres[closestWaterCoord.x, closestWaterCoord.y]).sqrMagnitude;
+            if (sqrDst <= Animal.maxViewDistance * Animal.maxViewDistance) {
+                return closestWaterCoord;
+            }
+        }
+        return Coord.invalid;
+    }
+
+    public static List<LivingEntity> SenseFood (Coord coord, Animal self) {
+
+        var foodSources = new List<LivingEntity> ();
+
+        int numSpecies = System.Enum.GetValues (typeof (Species)).Length;
+
+        // Loop over diet flags to find which species the animal eats
+        for (int bitIndex = 0; bitIndex < numSpecies; bitIndex++) {
+            int v = ((int) self.diet >> bitIndex) & 1;
+            // ith bit of diet mask set (the animal eats this species)
+            if (v == 1) {
+                int speciesIndex = 1 << bitIndex;
+                Map speciesMap = speciesMaps[speciesIndex];
+                foodSources.AddRange (speciesMap.GetEntities (coord, Animal.maxViewDistance));
+            }
+        }
+
+        return foodSources;
+    }
+
+    public static List<Animal> SensePotentialMates (Coord coord, Animal self) {
+        Map speciesMap = speciesMaps[(int) self.species];
+        List<LivingEntity> visibleEntities = speciesMap.GetEntities (coord, Animal.maxViewDistance);
+        var potentialMates = new List<Animal> ();
+
+        for (int i = 0; i < visibleEntities.Count; i++) {
+            var visibleAnimal = (Animal) visibleEntities[i];
+            if (visibleAnimal != self && visibleAnimal.genes.isMale != self.genes.isMale) {
+                if (visibleAnimal.currentAction == CreatureAction.SearchingForMate) {
+                    potentialMates.Add (visibleAnimal);
+                }
+            }
+        }
+
+        return potentialMates;
     }
 
     public static Surroundings Sense (Coord coord) {
@@ -136,10 +187,36 @@ public class Environment : MonoBehaviour {
         walkable = terrainData.walkable;
         size = terrainData.size;
 
+        int numSpecies = System.Enum.GetNames (typeof (Species)).Length;
+        List<Species>[] preyBySpecies = new List<Species>[numSpecies];
+        List<Species>[] predatorsBySpecies = new List<Species>[numSpecies];
+
         // Init species maps
-        speciesMaps = new Map[System.Enum.GetNames (typeof (Species)).Length];
-        for (int i = 0; i < speciesMaps.Length; i++) {
+        speciesMaps = new Map[numSpecies];
+        for (int i = 0; i < numSpecies; i++) {
             speciesMaps[i] = new Map (size, mapRegionSize);
+            preyBySpecies[i] = new List<Species> ();
+            predatorsBySpecies[i] = new List<Species> ();
+        }
+
+        // Store predator/prey relationships for all species
+        for (int i = 0; i < initialPopulations.Length; i++) {
+
+            if (initialPopulations[i].prefab is Animal) {
+                Animal hunter = (Animal) initialPopulations[i].prefab;
+                Species diet = hunter.diet;
+
+                for (int huntedSpeciesIndex = 0; huntedSpeciesIndex < numSpecies; huntedSpeciesIndex++) {
+                    int bit = ((int) diet >> huntedSpeciesIndex) & 1;
+                    // this bit of diet mask set (i.e. the hunter eats this species)
+                    if (bit == 1) {
+                        int huntedSpecies = 1 << huntedSpeciesIndex;
+                        preyBySpecies[(int) hunter.species].Add ((Species) huntedSpecies);
+                        predatorsBySpecies[huntedSpeciesIndex].Add (hunter.species);
+                    }
+                }
+
+            }
         }
 
         SpawnTrees ();

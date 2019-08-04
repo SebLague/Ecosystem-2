@@ -27,6 +27,28 @@ public class Map {
         }
     }
 
+    public List<LivingEntity> GetEntities (Coord origin, float viewDistance) {
+        List<RegionInfo> visibleRegions = GetRegionsInView (origin, viewDistance);
+        float sqrViewDst = viewDistance * viewDistance;
+        var visibleEntities = new List<LivingEntity> ();
+
+        for (int i = 0; i < visibleRegions.Count; i++) {
+            Coord regionCoord = visibleRegions[i].coord;
+
+            for (int j = 0; j < map[regionCoord.x, regionCoord.y].Count; j++) {
+                LivingEntity entity = map[regionCoord.x, regionCoord.y][j];
+                float sqrDst = Coord.SqrDistance (entity.coord, origin);
+                if (sqrDst < sqrViewDst) {
+                    if (EnvironmentUtility.TileIsVisibile (origin.x, origin.y, entity.coord.x, entity.coord.y)) {
+                        visibleEntities.Add (entity);
+                    }
+                }
+            }
+        }
+
+        return visibleEntities;
+    }
+
     public LivingEntity ClosestEntity (Coord origin, float viewDistance) {
         List<RegionInfo> visibleRegions = GetRegionsInView (origin, viewDistance);
         LivingEntity closestEntity = null;

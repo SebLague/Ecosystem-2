@@ -4,11 +4,11 @@ using UnityEngine;
 
 public class Plant : LivingEntity {
     float amountRemaining = 1;
-    float amountMultiplier = 10;
+    const float consumeSpeed = 1;
 
     public float Consume (float amount) {
         float amountConsumed = Mathf.Max (0, Mathf.Min (amountRemaining, amount));
-        amountRemaining -= amount * amountMultiplier;
+        amountRemaining -= amount * consumeSpeed;
 
         transform.localScale = Vector3.one * amountRemaining;
 
@@ -17,5 +17,11 @@ public class Plant : LivingEntity {
         }
 
         return amountConsumed;
+    }
+
+    public float AmountRemaining {
+        get {
+            return amountRemaining;
+        }
     }
 }

@@ -5,11 +5,12 @@ using UnityEngine;
 public class Animal : LivingEntity {
 
     public const int maxViewDistance = 10;
-    public enum CreatureAction { None, Resting, Exploring, GoingToFood, GoingToWater, Eating, Drinking }
-    public enum Diet { Herbivore, Carnivore }
 
-    public Diet diet;
+    [EnumFlags]
+    public Species diet;
+
     public CreatureAction currentAction;
+    public Genes genes;
 
     // Settings:
     float timeBetweenActionChoices = 1;
@@ -53,6 +54,7 @@ public class Animal : LivingEntity {
     public override void Init (Coord coord) {
         base.Init (coord);
         moveFromCoord = coord;
+        genes = Genes.RandomGenes (1);
 
         ChooseNextAction ();
     }
