@@ -29,8 +29,8 @@ public class Environment : MonoBehaviour {
     static Coord[, ][] walkableNeighboursMap;
     static List<Coord> walkableCoords;
 
-    static List<Species>[] preyBySpecies;
-    static List<Species>[] predatorsBySpecies;
+    static Dictionary<Species, List<Species>> preyBySpecies;
+    static Dictionary<Species, List<Species>> predatorsBySpecies;
 
     // array of visible tiles from any tile; value is Coord.invalid if no visible water tile
     static Coord[, ] closestVisibleWaterMap;
@@ -38,7 +38,7 @@ public class Environment : MonoBehaviour {
     static System.Random prng;
     TerrainGenerator.TerrainData terrainData;
 
-    static Map[] speciesMaps;
+    static Dictionary<Species, Map> speciesMaps;
 
     void Start () {
         prng = new System.Random ();
@@ -60,11 +60,11 @@ public class Environment : MonoBehaviour {
     }
 
     public static void RegisterMove (LivingEntity entity, Coord from, Coord to) {
-        speciesMaps[(int) entity.species].Move (entity, from, to);
+        speciesMaps[entity.species].Move (entity, from, to);
     }
 
     public static void RegisterDeath (LivingEntity entity) {
-        speciesMaps[(int) entity.species].Remove (entity, entity.coord);
+        speciesMaps[entity.species].Remove (entity, entity.coord);
     }
 
     public static Coord SenseWater (Coord coord) {
@@ -78,28 +78,34 @@ public class Environment : MonoBehaviour {
         return Coord.invalid;
     }
 
-    public static List<LivingEntity> SenseFood (Coord coord, Animal self) {
-
+    public static LivingEntity SenseFood (Coord coord, Animal self, System.Func<LivingEntity, LivingEntity, int> foodPreference) {
         var foodSources = new List<LivingEntity> ();
 
-        int numSpecies = System.Enum.GetValues (typeof (Species)).Length;
+        List<Species> prey = preyBySpecies[self.species];
+        for (int i = 0; i < prey.Count; i++) {
 
-        // Loop over diet flags to find which species the animal eats
-        for (int bitIndex = 0; bitIndex < numSpecies; bitIndex++) {
-            int v = ((int) self.diet >> bitIndex) & 1;
-            // ith bit of diet mask set (the animal eats this species)
-            if (v == 1) {
-                int speciesIndex = 1 << bitIndex;
-                Map speciesMap = speciesMaps[speciesIndex];
-                foodSources.AddRange (speciesMap.GetEntities (coord, Animal.maxViewDistance));
+            Map speciesMap = speciesMaps[prey[i]];
+
+            foodSources.AddRange (speciesMap.GetEntities (coord, Animal.maxViewDistance));
+        }
+
+        // Sort food sources based on preference function
+        foodSources.Sort ((a, b) => foodPreference (self, a).CompareTo (foodPreference (self, b)));
+
+        // Return first visible food source
+        for (int i = 0; i < foodSources.Count; i++) {
+            Coord targetCoord = foodSources[i].coord;
+            if (EnvironmentUtility.TileIsVisibile (coord.x, coord.y, targetCoord.x, targetCoord.y)) {
+                return foodSources[i];
             }
         }
 
-        return foodSources;
+        return null;
     }
 
+    // Return list of animals of the same species, with the opposite gender, who are also searching for a mate
     public static List<Animal> SensePotentialMates (Coord coord, Animal self) {
-        Map speciesMap = speciesMaps[(int) self.species];
+        Map speciesMap = speciesMaps[self.species];
         List<LivingEntity> visibleEntities = speciesMap.GetEntities (coord, Animal.maxViewDistance);
         var potentialMates = new List<Animal> ();
 
@@ -116,7 +122,7 @@ public class Environment : MonoBehaviour {
     }
 
     public static Surroundings Sense (Coord coord) {
-        var closestPlant = speciesMaps[(int) Species.Plant].ClosestEntity (coord, Animal.maxViewDistance);
+        var closestPlant = speciesMaps[Species.Plant].ClosestEntity (coord, Animal.maxViewDistance);
         var surroundings = new Surroundings ();
         surroundings.nearestFoodSource = closestPlant;
         surroundings.nearestWaterTile = closestVisibleWaterMap[coord.x, coord.y];
@@ -188,15 +194,17 @@ public class Environment : MonoBehaviour {
         size = terrainData.size;
 
         int numSpecies = System.Enum.GetNames (typeof (Species)).Length;
-        List<Species>[] preyBySpecies = new List<Species>[numSpecies];
-        List<Species>[] predatorsBySpecies = new List<Species>[numSpecies];
+        preyBySpecies = new Dictionary<Species, List<Species>> ();
+        predatorsBySpecies = new Dictionary<Species, List<Species>> ();
 
         // Init species maps
-        speciesMaps = new Map[numSpecies];
+        speciesMaps = new Dictionary<Species, Map> ();
         for (int i = 0; i < numSpecies; i++) {
-            speciesMaps[i] = new Map (size, mapRegionSize);
-            preyBySpecies[i] = new List<Species> ();
-            predatorsBySpecies[i] = new List<Species> ();
+            Species species = (Species) (1 << i);
+            speciesMaps.Add (species, new Map (size, mapRegionSize));
+
+            preyBySpecies.Add (species, new List<Species> ());
+            predatorsBySpecies.Add (species, new List<Species> ());
         }
 
         // Store predator/prey relationships for all species
@@ -211,13 +219,14 @@ public class Environment : MonoBehaviour {
                     // this bit of diet mask set (i.e. the hunter eats this species)
                     if (bit == 1) {
                         int huntedSpecies = 1 << huntedSpeciesIndex;
-                        preyBySpecies[(int) hunter.species].Add ((Species) huntedSpecies);
-                        predatorsBySpecies[huntedSpeciesIndex].Add (hunter.species);
+                        preyBySpecies[hunter.species].Add ((Species) huntedSpecies);
+                        predatorsBySpecies[(Species) huntedSpecies].Add (hunter.species);
                     }
                 }
-
             }
         }
+
+        //LogPredatorPreyRelationships ();
 
         SpawnTrees ();
 
@@ -352,8 +361,35 @@ public class Environment : MonoBehaviour {
                 var entity = Instantiate (pop.prefab);
                 entity.Init (coord);
 
-                speciesMaps[(int) entity.species].Add (entity, coord);
+                speciesMaps[entity.species].Add (entity, coord);
             }
+        }
+    }
+
+    void LogPredatorPreyRelationships () {
+        int numSpecies = System.Enum.GetNames (typeof (Species)).Length;
+        for (int i = 0; i < numSpecies; i++) {
+            string s = "(" + System.Enum.GetNames (typeof (Species)) [i] + ") ";
+            int enumVal = 1 << i;
+            var prey = preyBySpecies[(Species) enumVal];
+            var predators = predatorsBySpecies[(Species) enumVal];
+
+            s += "Prey: " + ((prey.Count == 0) ? "None" : "");
+            for (int j = 0; j < prey.Count; j++) {
+                s += prey[j];
+                if (j != prey.Count - 1) {
+                    s += ", ";
+                }
+            }
+
+            s += " | Predators: " + ((predators.Count == 0) ? "None" : "");
+            for (int j = 0; j < predators.Count; j++) {
+                s += predators[j];
+                if (j != predators.Count - 1) {
+                    s += ", ";
+                }
+            }
+            print (s);
         }
     }
 

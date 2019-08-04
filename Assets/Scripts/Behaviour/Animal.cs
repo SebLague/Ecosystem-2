@@ -89,33 +89,37 @@ public class Animal : LivingEntity {
     protected virtual void ChooseNextAction () {
         lastActionChooseTime = Time.time;
         // Get info about surroundings
-        Surroundings surroundings = Environment.Sense (coord);
-
+        //Surroundings surroundings = Environment.Sense (coord);
+        FindFood ();
         // Decide next action:
         // Eat if (more hungry than thirsty) or (currently eating and not critically thirsty)
         bool currentlyEating = currentAction == CreatureAction.Eating && foodTarget && hunger > 0;
         if (hunger >= thirst || currentlyEating && thirst < criticalPercent) {
-            if (surroundings.nearestFoodSource) {
-                currentAction = CreatureAction.GoingToFood;
-                foodTarget = surroundings.nearestFoodSource;
-                CreatePath (foodTarget.coord);
-            } else {
-                currentAction = CreatureAction.Exploring;
-            }
+
         }
         // More thirsty than hungry
         else {
-            if (surroundings.nearestWaterTile != Coord.invalid) {
-                currentAction = CreatureAction.GoingToWater;
-                waterTarget = surroundings.nearestWaterTile;
-                CreatePath (waterTarget);
-            } else {
-                currentAction = CreatureAction.Exploring;
-            }
+
         }
 
         Act ();
 
+    }
+
+    protected virtual void FindFood () {
+        LivingEntity foodSource = Environment.SenseFood (coord, this, FoodPreferenceScore);
+        if (foodSource) {
+            currentAction = CreatureAction.GoingToFood;
+            foodTarget = foodSource;
+            CreatePath (foodTarget.coord);
+
+        } else {
+            currentAction = CreatureAction.Exploring;
+        }
+    }
+
+    protected virtual int FoodPreferenceScore (LivingEntity self, LivingEntity food) {
+        return Coord.SqrDistance (self.coord, food.coord);
     }
 
     protected void Act () {

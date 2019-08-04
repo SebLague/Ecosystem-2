@@ -9,6 +9,7 @@ public class Map {
     readonly Vector2[, ] centres;
     readonly int regionSize;
     readonly int numRegions;
+    public int numEntities;
 
     public Map (int size, int regionSize) {
         this.regionSize = regionSize;
@@ -122,6 +123,7 @@ public class Map {
         e.mapIndex = index;
         e.mapCoord = coord;
         map[regionX, regionY].Add (e);
+        numEntities++;
     }
 
     public void Remove (LivingEntity e, Coord coord) {
@@ -138,6 +140,7 @@ public class Map {
         }
         // Remove last entity from the list
         map[regionX, regionY].RemoveAt (lastElementIndex);
+        numEntities--;
     }
 
     public void Move (LivingEntity e, Coord fromCoord, Coord toCoord) {
