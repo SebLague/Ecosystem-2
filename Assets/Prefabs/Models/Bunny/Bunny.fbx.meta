@@ -1,29 +1,9 @@
 fileFormatVersion: 2
-guid: 057f2f2e2d9f9486091891729e38b18a
+guid: f892f7f7fafa34650a0281cc707ca6bf
 ModelImporter:
   serializedVersion: 25
   internalIDToNameTable: []
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Bunny
-    second: {fileID: 2100000, guid: 2c423ba3ec69b4461a99ca939a93b4ac, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Eyes
-    second: {fileID: 2100000, guid: e11cbbfebab0c4cd2a0d8b0739ff5c0d, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Tail
-    second: {fileID: 2100000, guid: 26fe267f251bc46ab859ce8c79b9f5ec, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Teeth
-    second: {fileID: 2100000, guid: 48ec0ce64f8134c38abcdfe6147816d1, type: 2}
+  externalObjects: {}
   materials:
     importMaterials: 1
     materialName: 0

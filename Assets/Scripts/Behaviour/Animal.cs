@@ -11,11 +11,13 @@ public class Animal : LivingEntity {
 
     public CreatureAction currentAction;
     public Genes genes;
+    public Color maleColour;
+    public Color femaleColour;
 
     // Settings:
     float timeBetweenActionChoices = 1;
     float moveSpeed = 1.5f;
-    float timeToDeathByHunger = 120;
+    float timeToDeathByHunger = 200;
     float timeToDeathByThirst = 200;
 
     float drinkDuration = 6;
@@ -56,8 +58,12 @@ public class Animal : LivingEntity {
         moveFromCoord = coord;
         genes = Genes.RandomGenes (1);
 
+        material.color = (genes.isMale) ? maleColour : femaleColour;
+
         ChooseNextAction ();
     }
+
+
 
     protected virtual void Update () {
 
@@ -89,17 +95,16 @@ public class Animal : LivingEntity {
     protected virtual void ChooseNextAction () {
         lastActionChooseTime = Time.time;
         // Get info about surroundings
-        //Surroundings surroundings = Environment.Sense (coord);
-        FindFood ();
+
         // Decide next action:
         // Eat if (more hungry than thirsty) or (currently eating and not critically thirsty)
         bool currentlyEating = currentAction == CreatureAction.Eating && foodTarget && hunger > 0;
         if (hunger >= thirst || currentlyEating && thirst < criticalPercent) {
-
+            FindFood ();
         }
         // More thirsty than hungry
         else {
-
+            FindWater ();
         }
 
         Act ();
@@ -107,7 +112,7 @@ public class Animal : LivingEntity {
     }
 
     protected virtual void FindFood () {
-        LivingEntity foodSource = Environment.SenseFood (coord, this, FoodPreferenceScore);
+        LivingEntity foodSource = Environment.SenseFood (coord, this, FoodPreferencePenalty);
         if (foodSource) {
             currentAction = CreatureAction.GoingToFood;
             foodTarget = foodSource;
@@ -118,7 +123,20 @@ public class Animal : LivingEntity {
         }
     }
 
-    protected virtual int FoodPreferenceScore (LivingEntity self, LivingEntity food) {
+    protected virtual void FindWater () {
+        Coord waterTile = Environment.SenseWater (coord);
+        if (waterTile != Coord.invalid) {
+            currentAction = CreatureAction.GoingToWater;
+            waterTarget = waterTile;
+            CreatePath (waterTarget);
+
+        } else {
+            currentAction = CreatureAction.Exploring;
+        }
+    }
+
+    // When choosing from multiple food sources, the one with the lowest penalty will be selected
+    protected virtual int FoodPreferencePenalty (LivingEntity self, LivingEntity food) {
         return Coord.SqrDistance (self.coord, food.coord);
     }
 
@@ -150,7 +168,7 @@ public class Animal : LivingEntity {
 
     protected void CreatePath (Coord target) {
         // Create new path if current is not already going to target
-        if (path == null || pathIndex >= path.Length || (path[path.Length - 1] != target || path[pathIndex] != coord)) {
+        if (path == null || pathIndex >= path.Length || (path[path.Length - 1] != target || path[pathIndex - 1] != moveTargetCoord)) {
             path = EnvironmentUtility.GetPath (coord.x, coord.y, target.x, target.y);
             pathIndex = 0;
         }
