@@ -218,7 +218,7 @@ public class Animal : LivingEntity {
 
         // Finished moving
         if (moveTime >= 1) {
-            Environment.RegisterMove (this, coord, moveTargetCoord);
+            Environment.RegisterMove (this, moveFromCoord, moveTargetCoord);
             coord = moveTargetCoord;
 
             animatingMovement = false;
