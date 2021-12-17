@@ -360,6 +360,13 @@ public class Environment : MonoBehaviour {
 
                 var entity = Instantiate (pop.prefab);
                 entity.Init (coord);
+                var isAnimal = entity.GetComponent<Animal>();
+                if(isAnimal){
+                    var genes = isAnimal.genes;
+                    string sex = genes.isMale ? "Male" : "Female";
+                    entity.gameObject.name = entity.gameObject.name + " - (" + sex + ")";
+                }
+                
 
                 speciesMaps[entity.species].Add (entity, coord);
             }

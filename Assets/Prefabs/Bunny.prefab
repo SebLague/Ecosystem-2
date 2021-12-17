@@ -58,8 +58,8 @@ MonoBehaviour:
   consumeSpeed: 100
   diet: 2
   currentAction: 0
-  maleColour: {r: 0.3584906, g: 0.2330951, b: 0.13020648, a: 0}
-  femaleColour: {r: 0.6509804, g: 0.3215686, b: 0.42039222, a: 0}
+  maleColour: {r: 0.581, g: 0.3377569, b: 0.14060198, a: 0}
+  femaleColour: {r: 0.92156863, g: 0.72619605, b: 0.7837291, a: 0}
   hunger: 0
   thirst: 0
 --- !u!1001 &322534139445717557

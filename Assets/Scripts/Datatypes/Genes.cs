@@ -10,7 +10,7 @@ public class Genes {
     public readonly float[] values;
 
     public Genes (float[] values) {
-        isMale = RandomValue () < 0.5f;
+        isMale = NextFloat(0f, 1f) < 0.5f;
         this.values = values;
     }
 
@@ -38,5 +38,10 @@ public class Genes {
         double u2 = 1 - prng.NextDouble ();
         double randStdNormal = Sqrt (-2 * Log (u1)) * Sin (2 * PI * u2);
         return (float) randStdNormal;
+    }
+    static float NextFloat(float min, float max){
+        System.Random random = new System.Random();
+        double val = (random.NextDouble() * (max - min) + min);
+        return (float)val;
     }
 }
