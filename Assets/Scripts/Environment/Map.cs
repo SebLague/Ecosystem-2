@@ -132,15 +132,19 @@ public class Map {
 
         int index = e.mapIndex;
         int lastElementIndex = map[regionX, regionY].Count - 1;
-        // If this entity is not last in the list, put the last entity in its place
-        if (index != lastElementIndex) {
-
-            map[regionX, regionY][index] = map[regionX, regionY][lastElementIndex];
-            map[regionX, regionY][index].mapIndex = e.mapIndex;
+         // make sure the map is non-empty 
+        if (lastElementIndex >= 0) {
+            // If this entity is not last in the list, put the last entity in its place
+            if (index != lastElementIndex) {
+                // Debug.Log(String.Format("Trying to access map[{0}, {1}][{2}]", regionX, regionY, index));
+                // Debug.Log(String.Format("Map length: {0}", map[regionX, regionY].Count ));
+                map[regionX, regionY][index] = map[regionX, regionY][lastElementIndex];
+                map[regionX, regionY][index].mapIndex = e.mapIndex;
+            }
+            // Remove last entity from the list
+            map[regionX, regionY].RemoveAt (lastElementIndex);
+            numEntities--;
         }
-        // Remove last entity from the list
-        map[regionX, regionY].RemoveAt (lastElementIndex);
-        numEntities--;
     }
 
     public void Move (LivingEntity e, Coord fromCoord, Coord toCoord) {

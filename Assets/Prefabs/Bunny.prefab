@@ -27,6 +27,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4684706620502999343}
   m_Father: {fileID: 0}
@@ -46,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   colourMaterialIndex: 2
   species: 4
-  matTest: {fileID: 2100000, guid: 2c423ba3ec69b4461a99ca939a93b4ac, type: 2}
+  material: {fileID: 2100000, guid: 0e27191982d3a4c009146d1cb7557207, type: 2}
   coord:
     x: 0
     y: 0
@@ -54,10 +55,11 @@ MonoBehaviour:
   mapCoord:
     x: 0
     y: 0
+  consumeSpeed: 100
   diet: 2
   currentAction: 0
-  maleColour: {r: 0.3584906, g: 0.2330951, b: 0.13020648, a: 0}
-  femaleColour: {r: 0.6509434, g: 0.45010933, b: 0.3224012, a: 0}
+  maleColour: {r: 0.581, g: 0.3377569, b: 0.14060198, a: 0}
+  femaleColour: {r: 0.92156863, g: 0.72619605, b: 0.7837291, a: 0}
   hunger: 0
   thirst: 0
 --- !u!1001 &322534139445717557
@@ -65,12 +67,28 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 2
     m_TransformParent: {fileID: 2589637962258072678}
     m_Modifications:
-    - target: {fileID: -927199367670048503, guid: f892f7f7fafa34650a0281cc707ca6bf,
+    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
         type: 3}
-      propertyPath: m_Name
-      value: Bunny 1
+      propertyPath: m_RootOrder
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 16.234
+      objectReference: {fileID: 0}
+    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 16.233995
+      objectReference: {fileID: 0}
+    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 16.233995
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
         type: 3}
@@ -89,6 +107,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
         type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071067
+      objectReference: {fileID: 0}
+    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
+        type: 3}
       propertyPath: m_LocalRotation.x
       value: -0.7071068
       objectReference: {fileID: 0}
@@ -101,16 +124,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalRotation.z
       value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
-        type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.7071067
-      objectReference: {fileID: 0}
-    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
-        type: 3}
-      propertyPath: m_RootOrder
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
         type: 3}
@@ -127,21 +140,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
-        type: 3}
-      propertyPath: m_LocalScale.x
-      value: 16.234
-      objectReference: {fileID: 0}
-    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
-        type: 3}
-      propertyPath: m_LocalScale.y
-      value: 16.233995
-      objectReference: {fileID: 0}
-    - target: {fileID: -4216859302048453862, guid: f892f7f7fafa34650a0281cc707ca6bf,
-        type: 3}
-      propertyPath: m_LocalScale.z
-      value: 16.233995
-      objectReference: {fileID: 0}
     - target: {fileID: -1504981713932161579, guid: f892f7f7fafa34650a0281cc707ca6bf,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -157,7 +155,13 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[2]
       value: 
       objectReference: {fileID: 2100000, guid: 2c423ba3ec69b4461a99ca939a93b4ac, type: 2}
+    - target: {fileID: -927199367670048503, guid: f892f7f7fafa34650a0281cc707ca6bf,
+        type: 3}
+      propertyPath: m_Name
+      value: Bunny 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
+    m_AddedGameObjects: []
   m_SourcePrefab: {fileID: 100100000, guid: f892f7f7fafa34650a0281cc707ca6bf, type: 3}
 --- !u!4 &4684706620502999343 stripped
 Transform:

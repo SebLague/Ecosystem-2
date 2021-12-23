@@ -14,6 +14,8 @@ public class LivingEntity : MonoBehaviour {
     public Coord mapCoord;
 
     protected bool dead;
+    float amountRemaining = 1;
+    public float consumeSpeed = 8;
 
     public virtual void Init (Coord coord) {
         this.coord = coord;
@@ -35,6 +37,25 @@ public class LivingEntity : MonoBehaviour {
             dead = true;
             Environment.RegisterDeath (this);
             Destroy (gameObject);
+        }
+    }
+
+    public float Consume (float amount) {
+        float amountConsumed = Mathf.Max (0, Mathf.Min (amountRemaining, amount));
+        amountRemaining -= amount * consumeSpeed;
+
+        transform.localScale = Vector3.one * amountRemaining;
+
+        if (amountRemaining <= 0) {
+            Die (CauseOfDeath.Eaten);
+        }
+
+        return amountConsumed;
+    }
+
+    public float AmountRemaining {
+        get {
+            return amountRemaining;
         }
     }
 }
